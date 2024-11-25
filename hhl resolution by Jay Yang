@@ -1,0 +1,537 @@
+needsPackage "NormalToricVarieties"
+needsPackage "PruneComplex"
+
+--step 2: go through the rest of the rays, and split the polyhedrons
+
+--takes a polytope, and a matrix who's rows are the rays
+sliceByHyperplanes = (P,raysMatrix) -> (
+    verts := vertices P;
+    cells := {P};
+    for i from 0 to numRows raysMatrix - 1 do (
+        v := raysMatrix^{i};
+        cs := flatten entries (v * verts);
+        --mostly the floor/ceiling shouldn't be needed, but they convert us to ZZ
+        maxValue := ceiling max cs;
+        minValue := floor min cs;
+        slices := hashTable for i in minValue ..< maxValue list (
+            (i,polyhedronFromHData((-v)||v,matrix {{-i},{i+1}})));
+        newCells := flatten for c in cells list (
+            cs := flatten entries (v * vertices c);
+            --mostly the floor/ceiling shouldn't be needed, but they convert us to ZZ
+            currMaxValue := ceiling max cs;
+            currMinValue := floor min cs;
+            for i in currMinValue..<currMaxValue list (
+                s := slices#i;
+                newC := intersection (c,s);
+                --only include the top dimension cells
+                if dim newC == dim P then newC else continue
+                )
+            );
+        cells = newCells);
+    cells)
+
+--takes a matrix and constructs the hyperplane for the kernel as a polyhedron
+kernelPolyhedron := (phi) -> (
+    L := transpose phi;
+    n := numRows L;
+    polyhedronFromHData(L,transpose matrix {toList (n:0)},L,transpose matrix {toList (n:0)})
+    )
+
+--given the maximal cells, get all polyhedra in all dimensions
+--as a hash table.
+--assumes that the cells have the correct intersection structure and all cells are compact
+--returns a matrix of all the vertces and a hash table containing the cells
+--represented by a tuple of indices into the vertex table.
+toFacesByDimension = (cells) -> (
+    verts := toList set flatten apply(cells, c -> entries transpose vertices c);
+    vertexTable := hashTable toList apply(pairs verts, p -> (p#1,p#0));
+    relabelFaces := (verts, faces) -> (
+        applyValues(faces, fs ->
+            apply(fs, f -> sort apply(f#0, i -> (vertexTable#(entries (verts_i))))))
+        );
+    facesList := apply(cells, c -> relabelFaces(vertices c, faces c));
+    faceTable := fold(facesList,(h1,h2) -> merge (h1,h2,(l1,l2) -> l1|l2));
+    (matrix transpose verts,applyValues(faceTable, fs -> toList set fs))
+    )
+
+
+--polyhedra on polyhedralComplexes is broken by an off by 1, so this is my horrible hack.
+complexToPolytopes = (PC) -> (
+    polyhedra(0,PC); -- compute it once to make the cache entry exist
+    cftr := (select(keys PC.cache, k -> toString k == "computedFacesThroughRays"))#0;
+    polytopes := PC.cache#cftr;
+    applyKeys(polytopes, k -> dim PC - k - 1))
+
+polytopeToRepresentative := (P,L,Lcone) -> (
+    for i from 0 to numColumns L - 1 do (
+        v := L_{i};
+        vpoly := convexHull (-v);
+        P' := P + vpoly;
+        if contains(Lcone,P') then P = P';
+        );
+    P
+    )
+
+--takes a ring, a complex, and a lattice basis, the lattice basis should generate the fundemental parallelapiped
+--used in the construction of the complex
+--returns a hashTable containing enough information to make a resolution.
+makeResolutionTable = (Y,cells,L) -> (
+    S:= ring Y;
+    --verts := vertices PC;
+    (verts, faces) := toFacesByDimension(cells);
+    d := max keys faces - 1;
+    
+    
+    --polytopesByDimension := complexToPolytopes(PC);
+    --polytopesByDimension = hashTable apply(select(keys polytopesByDimension, i -> i!=-1), k -> (k,polytopesByDimension#k));
+    polytopesByDimension = applyKeys(faces,i -> d-i);
+    polytopesByDimension = hashTable apply(select(keys polytopesByDimension, i -> i!=-1), k -> (k,polytopesByDimension#k));
+    degreeMatrix := transpose matrix degrees S;
+    raysMatrix := matrix rays Y;
+    pointToFineDegree := p -> (transpose matrix {apply(entries (raysMatrix * p), ceiling)})_0;
+    pointToDegree := p -> (degreeMatrix * pointToFineDegree p);
+    allPolyhedra := select(flatten values polytopesByDimension, p -> p!={});
+    hulls := hashTable apply(allPolyhedra, p -> (p,convexHull verts_(p)));
+    pointsTable := hashTable apply(allPolyhedra, p -> (p,(interiorPoint hulls#p)_0));
+    modulesTable := applyValues(pointsTable,p -> S^{entries (- pointToDegree p)});
+    fineDegreeTable := applyValues(pointsTable,pointToFineDegree);
+    --for each polytope, find the lineality space, and if it's 
+    polytopeClassesByDimension := applyValues(polytopesByDimension, polys -> 
+        values partition(p -> (vertices polytopeToRepresentative(hulls#p,L,coneFromVData L)), polys));
+    new HashTable from { "ring" => S,
+                         "verts" => verts,
+                         "dimension" => d,
+                         "polytopeClasses" => polytopeClassesByDimension,
+                         "modulesTable" => modulesTable,
+                         "fineDegreeTable" => fineDegreeTable}
+    );
+
+vertices convexHull matrix {{0},{0}}
+
+
+--given a matrix, find the "leftmost" maximal rank submatrix. resulting matrix
+--is square if the original matrix was maximal rank.
+linearlyIndependentVectors := mat -> (
+    columns := apply(numColumns mat, i -> mat_i);
+    n := numRows mat;
+    M := matrix toList (n:{});
+    for c in columns do (
+        M' := M | matrix c;
+        if rank M' > rank M then M = M';
+        );
+    M
+    )
+
+frame := (verts,p) -> (
+    vP := verts_(p);
+    if dim convexHull vP == 0 then return matrix (toList ((numRows verts):{}));
+    fP := vP_(toList(1..<(numColumns vP))) - matrix toList ((numColumns vP - 1):vP_0);
+    linearlyIndependentVectors fP
+    )
+
+--given two polytopes q \subset p of codimension 1, give a sign for the orientation.
+sign := (verts,q,p) -> (
+    fP := frame(verts,p);
+    fQ := frame(verts,q);
+    vQ := verts_(q);
+    --now that we have frames, extend the frame on Q to a frame on P by adding a inward pointing vector at the end,
+    --i.e. any other vector in P
+    v := (toList(set(p)-set(q)))_0;
+    fP'=fQ|(verts_{v}-vQ_{0});
+    M := solve(fP,fP');
+    if det M>0 then 1 else -1
+    )
+
+gluingSign := (verts,p,q) -> (
+    fP := frame(verts,p);
+    fQ := frame(verts,q);
+    M := solve(fP,fQ);
+    if det M>0 then 1 else -1
+    )
+
+--from a resolution tables tuple, make an actual complex
+makeResolution = (RT) -> (
+    polytopeClassesByDimension:=RT#"polytopeClasses";
+    modulesTable:=RT#"modulesTable";
+    fineDegreeTable:=RT#"fineDegreeTable";
+    S := RT#"ring";
+    verts := RT#"verts";
+    boundaries := for i from 0 to RT#"dimension" - 1 list (
+        targetPolys := polytopeClassesByDimension#i;
+        sourcePolys := polytopeClassesByDimension#(i+1);
+        M := matrix for tgts in targetPolys list (
+            for srcs in sourcePolys list (
+                src := srcs#0;--it doesn't matter which source polytope we take
+                tgtRep := tgts#0;
+                sum for tgt in tgts list (
+                    if isSubset(tgt,src) then (
+                        tgtM := modulesTable#tgt;
+                        srcM := modulesTable#src;
+                        degreeDiff := fineDegreeTable#src - fineDegreeTable#tgt;
+                        assert(all(entries degreeDiff, x -> x >= 0));
+                        --try to get the signs ....
+                        map(tgtM,srcM,gluingSign(verts,tgtRep,tgt)*sign(verts,tgt,src)*S_(entries degreeDiff))
+                        )
+                    else (
+                        0
+                        )
+                    )
+                )
+            )
+        );
+    chainComplex boundaries
+    )
+
+subdivide = (K, fundementalRays, raysMatrix) -> (
+    r := dim K;
+    --take the parallelogram cut out by the hyperplanes corresponding to fundementalRays
+    V := fundementalRays;
+    print (-V||V,matrix {toList ((r:0)|(r:1))});
+    P := polyhedronFromHData(-V||V,transpose matrix {toList ((r:0)|(r:1))});
+    P = intersection(K,P);
+
+    -- L is a lattice basis for the kernel of the dual
+    -- but we need to choose L in a way compatible with the fan structure of Y.
+    -- in particular, every hyperplane spanned by L should be the dual of a ray in Y.
+    L := rays coneFromVData vertices P;
+    assert(minors_r L == 1);
+    assert(rank L == r);
+    cells := sliceByHyperplanes(P,raysMatrix);
+    (cells,L)
+    )
+
+--fundementalRays should be a list of columns of transpose matrix rays Y
+makeHHLPolytopesRelative = (Y,phi,fundementalRays) -> (
+    S := ring Y;
+    raysMatrix := matrix rays Y;
+    A := coker phi;
+    psi:=map(A,target phi,1);
+    Arays := psi*(transpose raysMatrix);
+    --find a maximal rank submatrix of Arays that has deterimnant 1, if possible.
+    r := rank Arays;
+    assert(minors_r(fundementalRays)==1);
+    K := kernelPolyhedron phi;
+    assert(r == dim K);
+    subdivide(K,fundementalRays, raysMatrix)
+    )
+
+makeHHLPolytopes = (Y,phi) -> (
+    S := ring Y;
+    raysMatrix := matrix rays Y;
+    A := coker phi;
+    psi:=map(A,target phi,1);
+    Arays := prune psi*(transpose raysMatrix);
+    --find a maximal rank submatrix of Arays that has deterimnant 1, if possible.
+    r := rank Arays;
+    assert(r == rank target phi - rank source phi);
+    local fundementalRays;
+    for s in subsets(numColumns Arays,r) do (
+        Arays' := Arays_s;
+        if minors_r(Arays')==1 then (
+            fundementalRays = (transpose raysMatrix)_s;
+            break;
+        );
+    );
+    if fundementalRays===null then(
+        --TODO think if this is possible for well behaved maps.
+        error "Unhandled case, fundemental parallelogram not cut out by hyperplanes from Y";
+        );
+    
+     
+    K := kernelPolyhedron phi;
+    assert(r == dim K);
+    --matrix entries makes fundementalRays not a map to a cokernel
+    subdivide(K,transpose matrix entries fundementalRays, raysMatrix)
+    )
+
+--expects a toric variety, and a matrix mapping into the N-latice for Y, giving a toric inclusion.
+makeHHLResolution = (Y,phi) -> (
+    (cells,L) := makeHHLPolytopes(Y,phi);
+    print ("Cells Complete, " |(#cells) | " cells found");
+    RT := makeResolutionTable(Y,cells,L);
+    print "Labels Complete";
+    -- print RT;
+    makeResolution(RT)
+    )
+
+--basisMatrix should be a column matrix of the basis
+plotCells := (verts,faces,basisMatrix) -> (
+    verts // basisMatrix
+    )
+
+end--
+
+
+--------------------------------------------------------
+--------------------------------------------------------
+restart
+load "hhl.m2";
+X = hirzebruchSurface 2
+Y = X ** X;
+phi = diagonalToricMap X
+S = ring Y;
+C := makeHHLResolution(Y,matrix phi);
+rays X
+degrees ring X
+
+betti C
+multigraded betti C
+degrees S
+nefGenerators X
+isHomogeneous C
+HH C
+(kernel C.dd_1)
+(image C.dd_2)
+(degrees generators HH_1 C)_1
+(degrees relations HH_1 C)_1
+prune HH C
+C.dd
+isHomogeneous C
+R = ring X;
+C := makeHHLResolution(X,matrix {{},{}});
+prune HH C
+codim prune HH_0 C
+
+X = toricProjectiveSpace 2
+Y = X ** X;
+phi = diagonalToricMap X
+S = ring Y;
+C := makeHHLResolution(Y,matrix phi);
+prune HH C
+C.dd
+
+--Example for Greg
+X = toricProjectiveSpace 3
+C := makeHHLResolution(X,matrix {{1},{3},{4}})
+S=ring X
+C
+prune HH C
+C.dd_1
+toExternalString S
+D:=pruneComplex C
+ann prune HH_1 D
+D.dd
+
+res prune HH_0 C
+
+rayMatrix = matrix rays X
+(P,L) = makeHHLPolytopesRelative(X,matrix {{1},{3},{4}},transpose (rayMatrix^{2,3}))
+(verts,faces) := toFacesByDimension(P)
+verts//(transpose matrix {{-4_QQ,0,1},{-3,1,0}})
+
+(P,L) = makeHHLPolytopesRelative(X,matrix {{1},{3},{4}},transpose (rayMatrix^{1,0}))
+(verts,faces) := toFacesByDimension(P)
+verts
+verts//(transpose matrix {{1_QQ,-3,2},{0,-4,3}})
+
+(P,L) = makeHHLPolytopesRelative(X,matrix {{1},{3},{4}},transpose (rayMatrix^{0,3}))
+(verts,faces) := toFacesByDimension(P)
+verts
+verts//(transpose matrix {{1_QQ,-3,2},{0,-4,3}})
+
+
+
+
+--8 rays example
+X = normalToricVariety({{1,0},{1,1},{0,1},{-1,1},{-1,0},{-1,-1},{0,-1},{1,-1}},
+                        {{0,1},{1,2},{2,3},{3,4},{4,5},{5,6},{6,7},{0,7}})
+
+C := makeHHLResolution(X,matrix {{},{}})
+prune HH C
+
+
+
+--random examples
+
+
+
+X = normalToricVariety({{1,0},{0,1},{-1,3},{-1,-5},{0,-1}},
+                        {{0,1},{1,2},{2,3},{3,4},{0,4}})
+isSmooth X
+C := makeHHLResolution(X,matrix {{},{}})
+prune HH C
+
+
+X = toricProjectiveSpace 5
+C := makeHHLResolution(X,
+    matrix {{1,0},
+	    {0,1},
+	    {1,1},
+	    {2,1},
+	    {3,1}})
+(P,L) = makeHHLPolytopes(X,    matrix {{1,0},
+	    {0,1},
+	    {1,1},
+	    {2,1},
+	    {3,1}})
+rayMatrix := matrix rays X
+rayMatrix^{1,2,3}
+(P,L) = makeHHLPolytopesRelative(X,    matrix {{1,0},
+	    {0,1},
+	    {1,1},
+	    {2,1},
+	    {3,1}},transpose (rayMatrix^{1,2,3}))
+
+
+(verts,faces) := toFacesByDimension(P)
+faces
+betti res prune HH_0 C
+
+M = matrix {{1,1,1,1,1,1},{0,1,0,1,2,3},{0,0,1,1,1,1}}
+needsPackage "MonomialAlgebras"
+
+S = QQ[x_0..x_5]
+M = matrix {{1,1,1,1,1,1},{0,1,0,1,2,3},{0,0,1,1,1,1}}
+P = newRing(S,Degrees => M)
+I' = binomialIdeal P
+res I'
+
+
+Y = hirzebruchSurface 2
+phi = map(X,Y,matrix {{1,0},
+	    {0,1},
+	    {1,1},
+	    {2,1},
+	    {3,1}})
+
+
+isWellDefined phi
+
+
+--tricky example
+X = toricProjectiveSpace 3
+C := makeHHLResolution(X,matrix {{1},{3},{7}})
+Y = toricProjectiveSpace 1
+phi = map(X,Y,matrix {{1},{3},{7}});
+assert(isWellDefined phi)
+
+betti res ideal phi
+
+kernel transpose matrix {{1},{3},{7}}
+
+phi' = matrix {{1},{3},{7}}
+psi = map(coker phi',target phi',1)
+psi*(transpose matrix rays X)
+(transpose matrix rays X)
+prune (psi*(transpose matrix rays X))
+K = kernel transpose phi'
+
+(matrix rays X)
+
+---------
+restart
+load "hhl.m2"
+X = toricProjectiveSpace 3
+C := makeHHLResolution(X,matrix {{1},{2},{3}})
+Y = toricProjectiveSpace 1
+phi = map(X,Y,matrix {{1},{2},{3}});
+assert(isWellDefined phi)
+
+betti res ideal phi
+
+kernel transpose matrix {{1},{2},{3}}
+
+phi' = matrix {{1},{2},{3}}
+psi = map(coker phi',target phi',1)
+psi*(transpose matrix rays X)
+(transpose matrix rays X)
+prune (psi*(transpose matrix rays X))
+K = kernel transpose phi'
+
+(matrix rays X)
+
+makeHHLPolytopes(Y,matrix {{1,2,3}})
+
+
+B = matrix{{1_QQ,2},{-2,-3},{1,0},{0,1}}
+p=0;q=1/2-1/111;
+transpose matrix {apply(entries( (p)*B_0+(q)*B_1 ),l-> floor(l) )}
+
+---------
+restart
+load "hhl.m2"
+X = toricProjectiveSpace 3
+C := makeHHLResolution(X,matrix {{1},{3},{4}})
+Y = toricProjectiveSpace 1
+phi = map(X,Y,matrix {{1},{3},{4}});
+
+res normalizedModule(ring X,ideal phi)
+
+assert(isWellDefined phi)
+
+betti res ideal phi
+
+(matrix rays X)*(gens kernel transpose matrix {{1},{3},{4}})
+(kernel transpose matrix {{1},{3},{4}})
+ker matrix{{4,3,1,0},{0,1,3,4}}
+
+phi' = matrix {{1},{2},{3}}
+psi = map(coker phi',target phi',1)
+psi*(transpose matrix rays X)
+(transpose matrix rays X)
+prune (psi*(transpose matrix rays X))
+K = kernel transpose phi'
+
+
+
+makeHHLPolytopes(Y,matrix {{1,2,3}})
+
+
+B = matrix{{2_QQ,3},{-3,-4},{1,0},{0,1}}
+p=0;q=1;
+transpose matrix {apply(entries( (p)*B_0+(q)*B_1 ),l-> floor(l) )}
+
+X = toricProjectiveSpace 3
+C := makeHHLResolution(X,matrix {{2},{5},{7}})
+phi = map(X,Y,matrix {{2},{5},{7}})
+isWellDefined phi
+betti res ideal phi
+
+
+phi' = matrix {{2},{5},{7}};
+psi = map(coker phi',target phi',1)
+psi*(transpose matrix rays X)
+(transpose matrix rays X)
+(psi*(transpose matrix rays X))
+basis target psi
+mingens target psi
+rho = map(ZZ^2,target psi,{{1,1,-1},{0,-7,5}})
+isWellDefined rho
+rho*(psi*(transpose matrix rays X))
+(prune (psi*(transpose matrix rays X)))
+(matrix{{1,0},{3,1}})*(prune (psi*(transpose matrix rays X)))
+(matrix{{1,0},{7/2,1}})*(prune (psi*(transpose matrix rays X)))
+minors_2 prune (psi*(transpose matrix rays X))
+
+K = kernel transpose phi'
+Kbasis = map(K,ZZ^2,(matrix{{1,3},{0,1}}))
+psit = map(ambient K,K,gens K)
+dual psit
+r = map(ZZ^1,ambient K,{{-1,-1,-1}})
+(matrix rays X) * psit * Kbasis
+
+phi' = matrix {{-2},{3},{5}};
+psi = map(coker phi',target phi',1)
+psi*(transpose matrix rays X)
+(transpose matrix rays X)
+(prune (psi*(transpose matrix rays X)))
+
+
+normalizedModule := (R,I) -> (
+    P := presentation integralClosure(R/I);
+    B := ring P;
+    M := cokernel P;
+    b := numgens B;
+    r := numgens R;
+    a := apply(b-r, i -> B_i);
+    G := first entries basis(M, Variables => a);
+    L := R^(apply(G,m -> -(degree m)));
+    gamma := map(B,R);
+    psi := map(M,L,gamma,{G});
+    L/kernel psi
+    )
+
+ideal phi
+
+betti res normalizedModule(ring ideal phi, ideal phi)
+
