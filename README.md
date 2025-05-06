@@ -9,7 +9,7 @@ This contains the output of the Sage computation of checking whether Bondal's nu
 
 "SageNumer4folds.sagews...html": Sage check of whether Bondal's numerical criterion coincides with success of Hanlon-Hicks-Lazarev resolution of the diagonal. Commented inline, but essentially uses a for loop to check the intersection product describing Bondal's numerical criterion. 
 
-"Macaulay2code for Hanlon-Hicks-..."
+"Macaulay2code for Hanlon-Hicks-Lazarev resolution by Jay Yang" Takes as input a smooth projective toric variety in Macaulay2 (along with a toric morphism; we use the diagonal map for all cases here), and outputs a Hanlon-Hicks-Lazarev resolution of the diagonal. Examples given in ....
 
 
 
