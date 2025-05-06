@@ -19,5 +19,5 @@ This contains the output of the Sage computation of checking whether Bondal's nu
 
 
 
-Negative example: F.4D.0047: Sage check in "Sage_BondalsNumericalCriterion_0000.0047.sagews.html"
+Positive example: F.4D.0047: Sage check in "Sage_BondalsNumericalCriterion_0000.0047.sagews.html"
 
