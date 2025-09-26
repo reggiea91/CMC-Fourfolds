@@ -1,0 +1,242 @@
+# Example for F.4D.0000
+
+# The polymake database for F.4D.0000 gives the following matrix we've used, for half-space representation:
+# 1 0 -1 1 0
+# 1 0 -1 0 0
+# 1 0 0 0 -1
+# 1 -1 0 0 0
+# 1 0 0 -1 0
+# 1 0 0 1 0
+# 1 1 1 -3 1
+
+# which we can bring into Sage in various ways. Here is one way:
+
+# Click on F.4D.0000 in the actual polymake database at: https://db.polymake.org/#collection=Polytopes.Lattice.SmoothReflexive
+
+# There, we see that F.4D.0000 has vertices: "VERTICES":[["1","1","0","-1","1"],["1","1","1","1","1"],["1","1","1","0","1"],["1","-3","1","0","1"],["1","0","1","1","1"],["1","1","1","0","-3"],["1","1","1","1","0"],["1","1","0","1","1"],["1","1","-6","-1","1"],["1","-5","0","-1","1"],["1","1","0","-1","-5"]]
+
+# These are what we use to enter F.4D.0000 in Sage. However, Sage wants a full dimensional polytope: This is a 4-dimensional polytope living in \R^5. However, this polytope lives in the hyperplane x_1=1, so we can remove the first 1 from each entry. **Note that if you ever see a polytope where all of the vertices are not listed with first entry 1 then let me know, because then we need to think more.**
+
+# So for entering this polytope in Sage, we instead use the `augmented/adjusted' list of vertices:
+
+# ["1","0","-1","1"],["1","1","1","1"],["1","1","0","1"],["-3","1","0","1"],["0","1","1","1"],["1","1","0","-3"],["1","1","1","0"],["1","0","1","1"],["1","-6","-1","1"],["-5","0","-1","1"],["1","0","-1","-5"]]
+
+# "Find and replace" in text editor to remove quotation marks ==> instead use: 
+
+# [1,0,-1,1],[1,1,1,1],[1,1,0,1],[-3,1,0,1],[0,1,1,1],[1,1,0,-3],[1,1,1,0],[1,0,1,1],[1,-6,-1,1],[-5,0,-1,1],[1,0,-1,-5]
+
+# Now we enter our polytope to Sage:
+
+
+p = Polyhedron( vertices = [[1,0,-1,1],[1,1,1,1],[1,1,0,1],[-3,1,0,1],[0,1,1,1],[1,1,0,-3],[1,1,1,0],[1,0,1,1],[1,-6,-1,1],[-5,0,-1,1],[1,0,-1,-5]] );
+p
+
+
+# One slick way to get a fan for a toric variety corresponding to a polytope in one step (rather than entering primitive ray generators + max'l cones) is to take the normal fan of a polytope:
+
+fan1 = NormalFan(p);
+fan1
+
+
+# We can ask for the rays of this fan: Note that this won't in general be the same ordering used by Macaulay2;
+# our list from \{ (-1,0,0,0), (0,-1,0,0), (0,0,-1,0), (0,0,1,0), (0,-1,1,0), (0,0,0,-1), (1,1,-3,1) \} agrees, though in different order.
+
+fan1.rays()
+
+
+# Sage think of maximal cones in the fan: [For fourfolds, these will be 4-dimensional cones] simply as "cone": 
+# https://doc.sagemath.org/html/en/reference/discrete_geometry/sage/geometry/fan.html#sage.geometry.fan.RationalPolyhedralFan.cones
+
+for cone in fan1: print(cone.rays())
+
+
+# That is, this has told us about the 4-dimensional cones in fan
+
+fan1.cones(4)
+
+
+#Now let's have some varieties:
+
+X = ToricVariety(fan1);
+dimension(X)
+
+
+#We see the cohomology ring of X:
+
+HH = X.cohomology_ring(); HH
+
+
+# We also have the Chow group, which we can use to compute intersections as well (Which we won't use):
+
+CH = X.Chow_group(ZZ); CH
+
+
+#Continuing: We first ask how many 3-cones there are (these correspond to irreducible torus-invariant curves in X):
+
+
+len(X.fan(3));
+
+
+#The 1-cones correspond to torus-invariant divisors.
+
+len(X.fan(1));
+
+
+#Now, we fix a torus-invariant curve. As we vary over the torus-invariant divisors, Bondal's criterion says:
+
+# All intersections must be \geq -1       AND      there can only be ONE -1
+
+#So, we check:
+
+#We compute intersection products by integrating complementary codimensional cohomology classes (dimension of the homological cycle corresponds to degree in the cohomology ring, there's a doubling in going from dimension over \R to dimension over \C, etc.):
+
+
+#(****) Note that for srange, the convention is that the first input IS included, and the second IS NOT. i.e.,
+
+#srange(0,4) gives 0,1,2,3.
+
+#Again, we start indexing at 0 [like in M2]:
+
+
+intList = [];
+for i in srange(0,22):
+    for j in srange(0,7):  
+        intVal = X.integrate(HH(X.fan(3)[i])*HH(X.fan(1)[j]) )
+        intList.append( intVal) 
+print( intList)
+
+
+#Now, we need to analyze this list based on: Fix a torus-invariant curve. (corresponds to a 3 cone for an ambient 4-fold).
+#Then check intersection products with each of the torus-invariant divisors (corresponds to a ray of the fan).
+
+# Our for loop fixes a curve, then varies over the torus-invariant divisors. So for this example, we'll check over the iterations:
+
+# srange(0,7)         [this corresponds to fixing the first curve, then intersecting with each of the 7 torus-invariant divisors]
+
+for k in srange(0,7):
+    print( intList[k])
+
+
+#This one's okay! Next, let's check for the second torus-invariant curve:
+
+
+# srange(7, 14)            [this corresponds to fixing the second curve, then intersecting with each of the 7 torus-invariant divisors].
+
+
+for k in srange(7,14):
+    print( intList[k])
+
+
+#This -2 violates Bondal's criterion, which we SHOULD see for F.4D.0000. There may be other problems with this [continued with this below, just for curiousity]:
+
+
+# At this point: What to report back in Overleaf?
+
+# srange(7,14) corresponded to the SECOND torus-invariant curve [with index 1, since indexing starts at 0] and the second torus invariant divisor (again with index 1 since indexing begins at 0):
+
+
+X.integrate(HH(X.fan(3)[1])*HH(X.fan(1)[1]))
+
+
+#This is what goes wrong for this variety F.4D.0000 !!!!
+
+# To report back in Overleaf:
+
+
+#This is the torus-invariant curve we report:
+
+X.fan(3)[1].rays()
+
+
+
+#Continued for curiousity:
+            
+# srange(14, 21)
+
+
+# This is the torus-invariant divisor to report back:
+
+X.fan(1)[1].rays()
+
+            
+#This is included in the Overleaf write-up for F.4D.0000.
+
+
+            
+            
+#----------------------------
+#Checking a positive example for F.4D.0047: Should work for this:
+
+#Make sure to clear variables before running next example.
+
+sage.misc.reset
+
+#Okay, now ready to move on.
+
+p = Polyhedron( vertices = [ [1,-1,1,-1],[1,-1,-1,-1],[1,-1,-3,1],[1,-1,1,1],[1,1,1,0],[1,1,0,0],[1,1,-1,1],[1,1,1,1],[1,0,0,-1],[1,0,1,-1],[0,1,0,0],[0,1,1,0],[-1,1,-1,1],[-1,1,1,1],[0,0,0,-1],[0,0,1,-1],[-3,-1,1,1],[-3,-1,-3,1],[-1,-1,-1,-1],[-1,-1,1,-1]                 ] );
+p
+
+
+fan1 = NormalFan(p);
+fan1
+
+
+X = ToricVariety(fan1);
+dimension(X)
+
+
+HH = X.cohomology_ring(); HH
+
+len(X.fan(3));
+
+len(X.fan(1));
+
+fan1.rays()
+
+intList = [];
+for i in srange(0,40):
+    for j in srange(0,9):  
+        intVal = X.integrate(HH(X.fan(3)[i])*HH(X.fan(1)[j]) )
+        intList.append( intVal) 
+print( intList)
+
+
+for k in srange(0,9):
+    print( intList[k])
+
+for k in srange(9,18):
+    print( intList[k])
+
+for k in srange(18,27):
+    print( intList[k])
+
+for k in srange(27,36):
+    print( intList[k])
+
+for k in srange(36,45):
+    print( intList[k])
+
+for k in srange(45,54):
+    print( intList[k])
+
+for k in srange(54,63):
+    print( intList[k])
+
+for k in srange(63,72):
+    print( intList[k])
+
+for k in srange(72,81):
+    print( intList[k])
+
+for k in srange(81,90):
+    print( intList[k])
+
+for i in srange(0,40):
+    for k in srange(9*i, 9*(i+1)):
+        if intList[k] < -1:
+            print ("less than -1", i, k)
+        if intList[k]==-1:
+            for j in srange(9*i, 9*(i+1)):
+                if intList[j]==-1 and j!= k:
+                    print ("two occurences of -1", i, k, j)
+        else: print ("no problem in srange", (9*i, 9*(i+1)) )
