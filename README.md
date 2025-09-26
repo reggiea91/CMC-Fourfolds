@@ -7,7 +7,7 @@ This contains the output of the Sage computation of checking whether Bondal's nu
 
 "GitHub_Fourfolds_Repository.pdf" Contains the output of the check in Macaulay2 on the success of the Hanlon-Hicks-Lazarev resolution of the diagonal to yield a full strong exceptional collection of line bundles for each of the 124 smooth projective toric Fano fourfolds. 
 
-"SageNumer4folds.sagews...html": Sage check of whether Bondal's numerical criterion coincides with success of Hanlon-Hicks-Lazarev resolution of the diagonal. Commented inline, but essentially uses a for loop to check the intersection product describing Bondal's numerical criterion. 
+"Sage_Numer4folds.txt": Sage code to enter into Sage worksheet. Used to check whether Bondal's numerical criterion coincides with success of Hanlon-Hicks-Lazarev resolution of the diagonal. Commented inline, but essentially uses a for loop to check the intersection product describing Bondal's numerical criterion. 
 
 "Macaulay2code for Hanlon-Hicks-Lazarev resolution by Jay Yang" Takes as input a smooth projective toric variety in Macaulay2 (along with a toric morphism; we use the diagonal map for all cases here), and outputs a Hanlon-Hicks-Lazarev resolution of the diagonal. A negative example (i.e., for which the Hanlon-Hicks-Lazarev resolution of the diagonal does not yield a full strong exceptional collection of line bundles) given in M2_NegativeExamples_4-folds...". Bondal's numerical criterion for F.4D.0000 checked in Sage in "Sage_BondalsNumericalCriterion_0000.0047.sagews.html"
 
