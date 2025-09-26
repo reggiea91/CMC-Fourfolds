@@ -15,5 +15,5 @@ This contains the output of the Sage computation of checking whether Bondal's nu
 "M2_NegativeExample_4-Folds..." M2 output using Jay Yang's code for Hanlon-Hicks-Lazarev resolution of the diagonal for F.4D.0000, for which line bundles LBs#0 and LBs#10, for instance, have non-zero Hom's in both directions. The presence of a directed cycle in the quiver describing the endomorphisms between line bundles in the collection of line bundles which appear on one side of the H-H-L resolution implies that there does not exist an ordering for which this collection is exceptional. 
 
 
-Positive example: F.4D.0047: M2 output using Jay Yang's code for Hanlon-Hicks-Lazarev resolution of the diagonal given in "M2_PosExample_F.4D.0047.pdf" Sage check that success of H-H-L resolution of the diagonal coincides with passing Bondal's numerical criterion checked in "Sage_BondalsNumericalCriterion_0000.0047.sagews.html"
+Positive example: F.4D.0047: M2 output using Jay Yang's code for Hanlon-Hicks-Lazarev resolution of the diagonal given in "M2_PosExample_F.4D.0047.m2" Sage check that success of H-H-L resolution of the diagonal coincides with passing Bondal's numerical criterion checked in "Sage_BondalsNumericalCriterion_0000.0047.sagews.html"
 
