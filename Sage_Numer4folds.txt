@@ -1,0 +1,2072 @@
+
+
+
+
+# Example for F.4D.0000
+
+# The polymake database for F.4D.0000 gives the following matrix we've used, for half-space representation:
+# 1 0 -1 1 0
+# 1 0 -1 0 0
+# 1 0 0 0 -1
+# 1 -1 0 0 0
+# 1 0 0 -1 0
+# 1 0 0 1 0
+# 1 1 1 -3 1
+
+# which we can bring into Sage in various ways. Here is one way:
+
+# Click on F.4D.0000 in the actual polymake database at: https://db.polymake.org/#collection=Polytopes.Lattice.SmoothReflexive
+
+# There, we see that F.4D.0000 has vertices: "VERTICES":[["1","1","0","-1","1"],["1","1","1","1","1"],["1","1","1","0","1"],["1","-3","1","0","1"],["1","0","1","1","1"],["1","1","1","0","-3"],["1","1","1","1","0"],["1","1","0","1","1"],["1","1","-6","-1","1"],["1","-5","0","-1","1"],["1","1","0","-1","-5"]]
+
+# These are what we use to enter F.4D.0000 in Sage. However, Sage wants a full dimensional polytope: This is a 4-dimensional polytope living in \R^5. However, this polytope lives in the hyperplane x_1=1, so we can remove the first 1 from each entry. **Note that if you ever see a polytope where all of the vertices are not listed with first entry 1 then let me know, because then we need to think more.**
+
+# So for entering this polytope in Sage, we instead use the `augmented/adjusted' list of vertices:
+
+# ["1","0","-1","1"],["1","1","1","1"],["1","1","0","1"],["-3","1","0","1"],["0","1","1","1"],["1","1","0","-3"],["1","1","1","0"],["1","0","1","1"],["1","-6","-1","1"],["-5","0","-1","1"],["1","0","-1","-5"]]
+
+# "Find and replace" in text editor to remove quotation marks ==> instead use: 
+
+# [1,0,-1,1],[1,1,1,1],[1,1,0,1],[-3,1,0,1],[0,1,1,1],[1,1,0,-3],[1,1,1,0],[1,0,1,1],[1,-6,-1,1],[-5,0,-1,1],[1,0,-1,-5]
+
+# Now we enter our polytope to Sage:
+
+
+p = Polyhedron( vertices = [[1,0,-1,1],[1,1,1,1],[1,1,0,1],[-3,1,0,1],[0,1,1,1],[1,1,0,-3],[1,1,1,0],[1,0,1,1],[1,-6,-1,1],[-5,0,-1,1],[1,0,-1,-5]] );
+p
+
+
+# One slick way to get a fan for a toric variety corresponding to a polytope in one step (rather than entering primitive ray generators + max'l cones) is to take the normal fan of a polytope:
+
+fan1 = NormalFan(p);
+fan1
+
+# We can ask for the rays of this fan: Note that this won't in general be the same ordering used by Macaulay2;
+# our list from \{ (-1,0,0,0), (0,-1,0,0), (0,0,-1,0), (0,0,1,0), (0,-1,1,0), (0,0,0,-1), (1,1,-3,1) \} agrees, though in different order.
+
+fan1.rays()
+
+# Sage thinks of maximal cones in the fan: [For fourfolds, these will be 4-dimensional cones] simply as "cone": 
+# https://doc.sagemath.org/html/en/reference/discrete_geometry/sage/geometry/fan.html#sage.geometry.fan.RationalPolyhedralFan.cones
+
+for cone in fan1: print(cone.rays())
+
+# That is, this has told us about the 4-dimensional cones in fan
+
+fan1.cones(4)
+
+#Now let's have some varieties:
+
+X = ToricVariety(fan1);
+dimension(X)
+
+#We see the cohomology ring of X:
+
+HH = X.cohomology_ring(); HH
+
+# We also have the Chow group, which we can use to compute intersections as well (Which we won't use):
+
+CH = X.Chow_group(ZZ); CH
+
+#Continuing: We first ask how many 3-cones there are (these correspond to irreducible torus-invariant curves in X):
+
+
+len(X.fan(3));
+
+#The 1-cones correspond to torus-invariant divisors.
+
+len(X.fan(1));
+
+
+#Now, we fix a torus-invariant curve. As we vary over the torus-invariant divisors, Bondal's criterion says:
+
+# All intersections must be \geq -1       AND      there can only be ONE -1
+
+#So, we check:
+
+#We compute intersection products by integrating complementary codimensional cohomology classes (dimension of the homological cycle corresponds to degree in the cohomology ring, there's a doubling in going from dimension over \R to dimension over \C, etc.):
+
+
+#(****) Note that for srange, the convention is that the first input IS included, and the second IS NOT. i.e.,
+
+#srange(0,4) gives 0,1,2,3.
+
+#Again, we start indexing at 0 [like in M2]:
+
+
+intList = [];
+for i in srange(0,22):
+    for j in srange(0,7):  
+        intVal = X.integrate(HH(X.fan(3)[i])*HH(X.fan(1)[j]) )
+        intList.append( intVal) 
+print( intList)
+
+
+#Now, we need to analyze this list based on: Fix a torus-invariant curve. (corresponds to a 3 cone for an ambient 4-fold).
+#Then check intersection products with each of the torus-invariant divisors (corresponds to a ray of the fan).
+
+# Our for loop fixes a curve, then varies over the torus-invariant divisors. So for this example, we'll check over the iterations:
+
+# srange(0,7)         [this corresponds to fixing the first curve, then intersecting with each of the 7 torus-invariant divisors]
+
+for k in srange(0,7):
+    print( intList[k])
+
+#This one's okay! Next, let's check for the second torus-invariant curve:
+
+
+# srange(7, 14)            [this corresponds to fixing the second curve, then intersecting with each of the 7 torus-invariant divisors].
+
+
+for k in srange(7,14):
+    print( intList[k])
+
+#This -2 violates Bondal's criterion, which we SHOULD see for F.4D.0000. There may be other problems with this [continued with this below, just for curiousity]:
+
+
+# At this point: What to report back in Overleaf?
+
+# srange(7,14) corresponded to the SECOND torus-invariant curve [with index 1, since indexing starts at 0] and the second torus invariant divisor (again with index 1 since indexing begins at 0):
+
+X.integrate(HH(X.fan(3)[1])*HH(X.fan(1)[1]))
+
+#This is what goes wrong for this variety F.4D.0000 !!!!
+
+# To report back in Overleaf:
+
+#This is the torus-invariant curve we report:
+
+X.fan(3)[1].rays()
+
+#Continued for curiousity:
+            
+# srange(14, 21)
+
+# This is the torus-invariant divisor to report back:
+
+X.fan(1)[1].rays()
+
+            
+#This is included in the Overleaf write-up for F.4D.0000.
+
+
+            
+            
+#----------------------------
+#Checking a positive example for F.4D.0047: Should work for this:
+
+#Make sure to clear variables before running next example.
+
+sage.misc.reset
+
+#Okay, now ready to move on.
+
+p = Polyhedron( vertices = [ [1,-1,1,-1],[1,-1,-1,-1],[1,-1,-3,1],[1,-1,1,1],[1,1,1,0],[1,1,0,0],[1,1,-1,1],[1,1,1,1],[1,0,0,-1],[1,0,1,-1],[0,1,0,0],[0,1,1,0],[-1,1,-1,1],[-1,1,1,1],[0,0,0,-1],[0,0,1,-1],[-3,-1,1,1],[-3,-1,-3,1],[-1,-1,-1,-1],[-1,-1,1,-1]                 ] );
+p
+
+
+fan1 = NormalFan(p);
+fan1
+
+
+X = ToricVariety(fan1);
+dimension(X)
+
+
+HH = X.cohomology_ring(); HH
+
+len(X.fan(3));
+
+len(X.fan(1));
+
+fan1.rays()
+
+intList = [];
+for i in srange(0,40):
+    for j in srange(0,9):  
+        intVal = X.integrate(HH(X.fan(3)[i])*HH(X.fan(1)[j]) )
+        intList.append( intVal) 
+print( intList)
+
+for k in srange(0,9):
+    print( intList[k])
+
+for k in srange(9,18):
+    print( intList[k])
+
+for k in srange(18,27):
+    print( intList[k])
+
+for k in srange(27,36):
+    print( intList[k])
+
+for k in srange(36,45):
+    print( intList[k])
+
+for k in srange(45,54):
+    print( intList[k])
+
+for k in srange(54,63):
+    print( intList[k])
+
+for k in srange(63,72):
+    print( intList[k])
+
+for k in srange(72,81):
+    print( intList[k])
+
+for k in srange(81,90):
+    print( intList[k])
+
+
+for i in srange(0,40):
+    for k in srange(9*i, 9*(i+1)):
+        if intList[k] < -1:
+            print ("less than -1", i, k)
+        if intList[k]==-1:
+            for j in srange(9*i, 9*(i+1)):
+                if intList[j]==-1 and j!= k:
+                    print ("two occurences of -1", i, k, j)
+        else: print ("no problem in srange", (9*i, 9*(i+1)) )
+
+      
+#--------Example for F.4D.0040
+
+sage.misc.reset;
+
+p = Polyhedron( vertices = [[0,-1,1,-1],[0,-1,1,1],[1,0,1,1],[1,1,1,1],[1,0,1,-1],[1,1,1,-1],[1,0,-3,1],[1,1,-2,1],[-2,1,1,1],[0,1,1,-1],[1,0,-1,-1],[1,1,0,-1],[-4,-1,1,1],[-2,-1,1,-1],[0,-1,-3,1],[0,-1,-1,-1]] );
+p
+
+
+fan1 = NormalFan(p);
+fan1
+
+X = ToricVariety(fan1);
+dimension(X)
+
+
+HH = X.cohomology_ring(); HH
+
+
+len(X.fan(3));
+
+len(X.fan(1));
+
+
+intList = [];
+for i in srange(0,32):
+    for j in srange(0,8):  
+        intVal = X.integrate(HH(X.fan(3)[i])*HH(X.fan(1)[j]) )
+        intList.append( intVal) 
+print( intList)
+
+
+for i in srange(0,32):
+    for k in srange(8*i, 8*(i+1)):
+        if intList[k] < -1:
+            print ("less than -1", i, k)
+        if intList[k]==-1:
+            for j in srange(8*i, 8*(i+1)):
+                if intList[j]==-1 and j!= k:
+                    print ("two occurences of -1", i, k, j)
+        else: print ("no problem in srange", (8*i, 8*(i+1)) )
+
+
+#(i,k,j) = (5,43,44) are offenders:
+# torus invariant curve i=5. Consider $k, j$ (mod 8):
+# intersects torus divisors 3 and 4 in -1? Let's check:\\
+
+X.fan(3)[5].rays() #this is the curve we want, C
+
+#divisors:
+
+X.fan(1)[3].rays();
+X.fan(1)[4].rays();
+
+X.integrate(HH(X.fan(3)[5])*HH(X.fan(1)[3]) );
+X.integrate(HH(X.fan(3)[5])*HH(X.fan(1)[4]) )
+
+#-------------
+
+#------ Example for F.4D.0001
+
+sage.misc.reset;
+
+p = Polyhedron (vertices = [[1,1,1,-1],[1,1,1,1],[-6,1,1,1],[1,-6,1,1],[1,1,-6,1],[0,1,1,-1],[1,0,1,-1],[1,1,0,-1]] );
+p
+
+
+fan1 = NormalFan(p);
+fan1
+X = ToricVariety(fan1);
+dimension(X)
+HH = X.cohomology_ring(); HH
+t = len(X.fan(3));
+t
+ones = len(X.fan(1));
+ones
+intList = [];
+for i in srange(0,t):
+    for j in srange(0,ones):  
+        intVal = X.integrate(HH(X.fan(3)[i])*HH(X.fan(1)[j]) )
+        intList.append( intVal) 
+print( intList)
+
+
+for i in srange(0,t):
+    for k in srange(ones*i, ones*(i+1)):
+        if intList[k] < -1:
+            print ("less than -1", i, k)
+        if intList[k]==-1:
+            for j in srange(ones*i, ones*(i+1)):
+                if intList[j]==-1 and j!= k:
+                    print ("two occurences of -1", i, k, j)
+        else: print ("no problem in srange", (ones*i, ones*(i+1)) )
+
+
+#offender is 3-cone 1, k is divisor 9
+X.fan(3)[1].rays() #this is the curve we want, C
+#torus divisor: Consider k=9 (mod ones=6)
+X.fan(3)[1]
+
+tildek = mod(9,6);
+tildek
+
+
+X.fan(1)[3].rays()
+X.fan(1)[3]
+
+#check intersection pairing:
+
+X.integrate(HH(X.fan(3)[1])*HH(X.fan(1)[3]) )
+
+#--------------------
+#------Example for F.4D.0048
+
+
+sage.misc.reset;
+
+p = Polyhedron( vertices = [[1,-1,1,0],[1,-1,-2,0],[1,-1,-1,-1],[1,-1,1,-1],[1,0,1,-1],[1,0,0,-1],[1,1,1,1],[1,1,-1,1],[1,1,0,0],[1,1,1,0],[1,0,1,1],[1,0,-2,1],[0,1,0,0],[0,1,1,0],[-1,1,-1,1],[-1,1,1,1],[0,0,0,-1],[0,0,1,-1],[-2,0,1,1],[-2,0,-2,1],[-1,-1,1,-1],[-1,-1,-1,-1],[-2,-1,-2,0],[-2,-1,1,0]] );
+p
+
+
+fan1 = NormalFan(p);
+fan1
+X = ToricVariety(fan1);
+dimension(X)
+HH = X.cohomology_ring(); HH
+t = len(X.fan(3));
+t
+ones = len(X.fan(1));
+ones
+intList = [];
+for i in srange(0,t):
+    for j in srange(0,ones):  
+        intVal = X.integrate(HH(X.fan(3)[i])*HH(X.fan(1)[j]) )
+        intList.append( intVal) 
+print( intList)
+
+
+for i in srange(0,t):
+    for k in srange(ones*i, ones*(i+1)):
+        if intList[k] < -1:
+            print ("less than -1", i, k)
+        if intList[k]==-1:
+            for j in srange(ones*i, ones*(i+1)):
+                if intList[j]==-1 and j!= k:
+                    print ("two occurences of -1", i, k, j)
+        else: print ("no problem in srange", (ones*i, ones*(i+1)) )
+
+
+#F.4D.0049
+
+sage.misc.reset;
+
+p = Polyhedron( vertices = [[1,-2,1,-1],[1,-2,-2,-1],[1,0,-2,1],[1,0,1,1],[1,1,1,0],[1,1,0,0],[1,1,-1,1],[1,1,1,1],[1,0,0,-1],[1,0,1,-1],[0,1,0,0],[0,1,1,0],[-1,1,-1,1],[-1,1,1,1],[0,0,0,-1],[0,0,1,-1],[-2,0,1,1],[-2,0,-2,1],[-2,-2,-2,-1],[-2,-2,1,-1]] );
+p
+
+
+fan1 = NormalFan(p);
+fan1
+X = ToricVariety(fan1);
+dimension(X)
+HH = X.cohomology_ring(); HH
+t = len(X.fan(3));
+t
+ones = len(X.fan(1));
+ones
+intList = [];
+for i in srange(0,t):
+    for j in srange(0,ones):  
+        intVal = X.integrate(HH(X.fan(3)[i])*HH(X.fan(1)[j]) )
+        intList.append( intVal) 
+print( intList)
+
+
+for i in srange(0,t):
+    for k in srange(ones*i, ones*(i+1)):
+        if intList[k] < -1:
+            print ("less than -1", i, k)
+        if intList[k]==-1:
+            for j in srange(ones*i, ones*(i+1)):
+                if intList[j]==-1 and j!= k:
+                    print ("two occurences of -1", i, k, j)
+        else: print ("no problem in srange", (ones*i, ones*(i+1)) )
+
+
+#F.4D.0050
+#------------------
+
+sage.misc.reset;
+p = Polyhedron( vertices = [[1,0,0,-1],[1,-2,-2,1],[1,0,1,-1],[1,-2,1,1],[1,1,1,-1],[1,1,1,1],[1,1,-2,1],[1,1,0,-1],[-2,1,1,1],[0,1,1,-1],[-2,1,-2,1],[0,1,0,-1],[-2,-2,1,1],[0,0,1,-1],[-2,-2,-2,1],[0,0,0,-1]] );
+p
+
+
+fan1 = NormalFan(p);
+fan1
+X = ToricVariety(fan1);
+dimension(X)
+HH = X.cohomology_ring(); HH
+t = len(X.fan(3));
+t
+ones = len(X.fan(1));
+ones
+intList = [];
+for i in srange(0,t):
+    for j in srange(0,ones):  
+        intVal = X.integrate(HH(X.fan(3)[i])*HH(X.fan(1)[j]) )
+        intList.append( intVal) 
+print( intList)
+
+
+for i in srange(0,t):
+    for k in srange(ones*i, ones*(i+1)):
+        if intList[k] < -1:
+            print ("less than -1", i, k)
+        if intList[k]==-1:
+            for j in srange(ones*i, ones*(i+1)):
+                if intList[j]==-1 and j!= k:
+                    print ("two occurences of -1", i, k, j)
+        else: print ("no problem in srange", (ones*i, ones*(i+1)) )
+
+
+#F.4D.0051:
+
+
+sage.misc.reset;
+
+p = Polyhedron(vertices = [[1,-1,-2,-3],[1,-1,-2,1],[1,-1,1,1],[1,-1,1,0],[1,1,1,1],[1,1,0,1],[1,1,0,-1],[1,1,1,0],[-1,1,0,-1],[0,1,1,0],[-1,1,0,1],[0,1,1,1],[0,-1,1,0],[0,-1,1,1],[-3,-1,-2,1],[-3,-1,-2,-3]]);
+p
+
+
+fan1 = NormalFan(p);
+fan1
+X = ToricVariety(fan1);
+dimension(X)
+HH = X.cohomology_ring(); HH
+t = len(X.fan(3));
+t
+ones = len(X.fan(1));
+ones
+intList = [];
+for i in srange(0,t):
+    for j in srange(0,ones):  
+        intVal = X.integrate(HH(X.fan(3)[i])*HH(X.fan(1)[j]) )
+        intList.append( intVal) 
+print( intList)
+
+
+for i in srange(0,t):
+    for k in srange(ones*i, ones*(i+1)):
+        if intList[k] < -1:
+            print ("less than -1", i, k)
+        if intList[k]==-1:
+            for j in srange(ones*i, ones*(i+1)):
+                if intList[j]==-1 and j!= k:
+                    print ("two occurences of -1", i, k, j)
+        else: print ("no problem in srange", (ones*i, ones*(i+1)) )
+
+
+#F.4D.0052:
+
+sage.misc.reset;
+
+p = Polyhedron(vertices = [[1,-1,-2,0],[1,-1,1,0],[1,-1,1,-2],[1,-1,0,-2],[1,1,1,0],[1,1,0,0],[1,1,-1,1],[1,1,1,1],[1,0,1,1],[1,0,-2,1],[0,1,0,0],[0,1,1,0],[-1,1,-1,1],[-1,1,1,1],[-2,0,1,1],[-2,0,-2,1],[0,-1,0,-2],[0,-1,1,-2],[-2,-1,1,0],[-2,-1,-2,0]]);
+p
+
+
+fan1 = NormalFan(p);
+fan1
+X = ToricVariety(fan1);
+dimension(X)
+HH = X.cohomology_ring(); HH
+t = len(X.fan(3));
+t
+ones = len(X.fan(1));
+ones
+intList = [];
+for i in srange(0,t):
+    for j in srange(0,ones):  
+        intVal = X.integrate(HH(X.fan(3)[i])*HH(X.fan(1)[j]) )
+        intList.append( intVal) 
+print( intList)
+
+
+for i in srange(0,t):
+    for k in srange(ones*i, ones*(i+1)):
+        if intList[k] < -1:
+            print ("less than -1", i, k)
+        if intList[k]==-1:
+            for j in srange(ones*i, ones*(i+1)):
+                if intList[j]==-1 and j!= k:
+                    print ("two occurences of -1", i, k, j)
+        else: print ("no problem in srange", (ones*i, ones*(i+1)) )
+
+
+#F.4D.0053:
+
+sage.misc.reset;
+
+p = Polyhedron(vertices = [[0,1,1,-1],[0,0,1,-1],[0,1,-1,-1],[0,0,-1,-1],[1,1,1,1],[1,-1,1,1],[1,-1,0,1],[1,1,0,1],[1,1,0,0],[1,0,0,0],[1,0,1,0],[1,1,1,0],[-1,1,1,1],[-1,-3,1,1],[-1,-3,-2,1],[-1,1,-2,1],[-1,1,-2,-1],[-1,-1,-2,-1],[-1,-1,1,-1],[-1,1,1,-1]]);
+p
+
+
+fan1 = NormalFan(p);
+fan1
+X = ToricVariety(fan1);
+dimension(X)
+HH = X.cohomology_ring(); HH
+t = len(X.fan(3));
+t
+ones = len(X.fan(1));
+ones
+intList = [];
+for i in srange(0,t):
+    for j in srange(0,ones):  
+        intVal = X.integrate(HH(X.fan(3)[i])*HH(X.fan(1)[j]) )
+        intList.append( intVal) 
+print( intList)
+
+
+for i in srange(0,t):
+    for k in srange(ones*i, ones*(i+1)):
+        if intList[k] < -1:
+            print ("less than -1", i, k)
+        if intList[k]==-1:
+            for j in srange(ones*i, ones*(i+1)):
+                if intList[j]==-1 and j!= k:
+                    print ("two occurences of -1", i, k, j)
+        else: print ("no problem in srange", (ones*i, ones*(i+1)) )
+
+#F.4D.0054
+
+sage.misc.reset;
+
+p = Polyhedron(vertices = [[0,1,-1,1],[0,-2,-1,1],[0,-2,1,1],[0,1,1,1],[1,1,1,0],[1,0,1,0],[1,0,0,0],[1,1,0,0],[1,1,0,1],[1,-1,0,1],[1,-1,1,1],[1,1,1,1],[0,0,-1,-1],[0,1,-1,-1],[0,0,1,-1],[0,1,1,-1],[-1,1,1,-1],[-1,-1,1,-1],[-1,-1,-2,-1],[-1,1,-2,-1],[-1,1,-2,0],[-1,-2,-2,0],[-1,-2,1,0],[-1,1,1,0]]);
+p
+
+
+fan1 = NormalFan(p);
+fan1
+X = ToricVariety(fan1);
+dimension(X)
+HH = X.cohomology_ring(); HH
+t = len(X.fan(3));
+t
+ones = len(X.fan(1));
+ones
+intList = [];
+for i in srange(0,t):
+    for j in srange(0,ones):  
+        intVal = X.integrate(HH(X.fan(3)[i])*HH(X.fan(1)[j]) )
+        intList.append( intVal) 
+print( intList)
+
+
+for i in srange(0,t):
+    for k in srange(ones*i, ones*(i+1)):
+        if intList[k] < -1:
+            print ("less than -1", i, k)
+        if intList[k]==-1:
+            for j in srange(ones*i, ones*(i+1)):
+                if intList[j]==-1 and j!= k:
+                    print ("two occurences of -1", i, k, j)
+        else: print ("no problem in srange", (ones*i, ones*(i+1)) )
+
+
+#F.4D.0055-----------
+#--------------------
+
+
+sage.misc.reset;
+
+p = Polyhedron(vertices = [[1,1,-1,0],[1,0,-1,0],[1,0,0,-1],[1,1,0,-1],[1,1,1,-1],[1,0,1,-1],[1,1,1,1],[1,0,1,1],[1,0,-1,1],[1,1,-1,1],[-3,1,1,1],[-3,-4,1,1],[-1,-2,1,-1],[-1,1,1,-1],[-1,-2,-1,1],[-1,1,-1,1],[0,-1,0,-1],[0,-1,-1,0],[0,1,0,-1],[0,1,-1,0]]);
+p
+
+
+
+fan1 = NormalFan(p);
+fan1
+X = ToricVariety(fan1);
+dimension(X)
+HH = X.cohomology_ring(); HH
+t = len(X.fan(3));
+t
+ones = len(X.fan(1));
+ones
+intList = [];
+for i in srange(0,t):
+    for j in srange(0,ones):  
+        intVal = X.integrate(HH(X.fan(3)[i])*HH(X.fan(1)[j]) )
+        intList.append( intVal) 
+print( intList)
+
+
+for i in srange(0,t):
+    for k in srange(ones*i, ones*(i+1)):
+        if intList[k] < -1:
+            print ("less than -1", i, k)
+        if intList[k]==-1:
+            for j in srange(ones*i, ones*(i+1)):
+                if intList[j]==-1 and j!= k:
+                    print ("two occurences of -1", i, k, j)
+        else: print ("no problem in srange", (ones*i, ones*(i+1)) )
+
+
+#--------------------------------------------------
+#F.4D.0056:
+
+
+sage.misc.reset;
+
+
+p = Polyhedron(vertices = [[1,1,-1,0],[1,0,-1,0],[1,0,-1,-1],[1,1,-1,-1],[1,1,0,-1],[1,0,0,-1],[1,1,1,1],[1,0,1,1],[1,0,1,0],[1,1,1,0],[1,0,0,1],[1,1,0,1],[-1,1,1,0],[-1,-2,1,0],[-2,-3,1,1],[-2,1,1,1],[0,-1,0,-1],[0,1,0,-1],[-2,-3,0,1],[-2,1,0,1],[0,-1,-1,-1],[-1,-2,-1,0],[0,1,-1,-1],[-1,1,-1,0]]) ; 
+p
+
+fan1 = NormalFan(p);
+fan1
+X = ToricVariety(fan1);
+dimension(X)
+HH = X.cohomology_ring(); HH
+t = len(X.fan(3));
+t
+ones = len(X.fan(1));
+ones
+intList = [];
+for i in srange(0,t):
+    for j in srange(0,ones):  
+        intVal = X.integrate(HH(X.fan(3)[i])*HH(X.fan(1)[j]) )
+        intList.append( intVal) 
+print( intList)
+
+
+for i in srange(0,t):
+    for k in srange(ones*i, ones*(i+1)):
+        if intList[k] < -1:
+            print ("less than -1", i, k)
+        if intList[k]==-1:
+            for j in srange(ones*i, ones*(i+1)):
+                if intList[j]==-1 and j!= k:
+                    print ("two occurences of -1", i, k, j)
+        else: print ("no problem in srange", (ones*i, ones*(i+1)) )
+
+
+#F.4D.0057:
+sage.misc.reset;
+
+p = Polyhedron(vertices = [[1,1,-1,-1],[1,0,-1,-1],[1,1,-1,1],[1,0,-1,1],[1,1,1,0],[1,0,1,0],[1,0,1,1],[1,1,1,1],[1,0,0,-1],[1,1,0,-1],[-1,1,1,0],[-1,-2,1,0],[-2,-3,1,1],[-2,1,1,1],[0,-1,0,-1],[0,1,0,-1],[-2,-3,-1,1],[0,-1,-1,-1],[-2,1,-1,1],[0,1,-1,-1]]);
+p
+
+
+fan1 = NormalFan(p);
+fan1
+X = ToricVariety(fan1);
+dimension(X)
+HH = X.cohomology_ring(); HH
+t = len(X.fan(3));
+t
+ones = len(X.fan(1));
+ones
+intList = [];
+for i in srange(0,t):
+    for j in srange(0,ones):  
+        intVal = X.integrate(HH(X.fan(3)[i])*HH(X.fan(1)[j]) )
+        intList.append( intVal) 
+print( intList)
+
+
+for i in srange(0,t):
+    for k in srange(ones*i, ones*(i+1)):
+        if intList[k] < -1:
+            print ("less than -1", i, k)
+        if intList[k]==-1:
+            for j in srange(ones*i, ones*(i+1)):
+                if intList[j]==-1 and j!= k:
+                    print ("two occurences of -1", i, k, j)
+        else: print ("no problem in srange", (ones*i, ones*(i+1)) )
+
+
+#---------------
+#F.4D.0058
+
+
+sage.misc.reset;
+
+
+p = Polyhedron(vertices = [[0,1,1,1],[0,1,0,1],[0,1,1,-1],[0,1,0,-1],[1,1,1,0],[1,1,0,0],[1,1,0,1],[1,1,1,1],[1,-1,1,0],[1,-1,-2,0],[1,-1,-2,1],[1,-1,1,1],[-1,-1,1,1],[-1,-1,-2,1],[-1,-1,-2,-2],[-1,-1,1,-2],[-1,0,1,-2],[-1,0,-1,-2],[-1,0,-1,1],[-1,0,1,1]]);
+p
+
+
+fan1 = NormalFan(p);
+fan1
+X = ToricVariety(fan1);
+dimension(X)
+HH = X.cohomology_ring(); HH
+t = len(X.fan(3));
+t
+ones = len(X.fan(1));
+ones
+intList = [];
+for i in srange(0,t):
+    for j in srange(0,ones):  
+        intVal = X.integrate(HH(X.fan(3)[i])*HH(X.fan(1)[j]) )
+        intList.append( intVal) 
+print( intList)
+
+
+for i in srange(0,t):
+    for k in srange(ones*i, ones*(i+1)):
+        if intList[k] < -1:
+            print ("less than -1", i, k)
+        if intList[k]==-1:
+            for j in srange(ones*i, ones*(i+1)):
+                if intList[j]==-1 and j!= k:
+                    print ("two occurences of -1", i, k, j)
+        else: print ("no problem in srange", (ones*i, ones*(i+1)) )
+
+
+#---------------
+#F.4D.0059------
+
+
+sage.misc.reset;
+
+p = Polyhedron(vertices = [[1,0,1,-1],[1,0,0,-1],[1,-2,1,1],[1,-2,0,1],[1,1,0,1],[1,1,1,1],[1,1,0,-1],[1,1,1,-1],[-2,1,1,1],[-2,1,-3,1],[0,1,-1,-1],[0,1,1,-1],[-2,-2,-3,1],[0,0,-1,-1],[-2,-2,1,1],[0,0,1,-1]]); p
+
+fan1 = NormalFan(p);
+fan1
+X = ToricVariety(fan1);
+dimension(X)
+HH = X.cohomology_ring(); HH
+t = len(X.fan(3));
+t
+ones = len(X.fan(1));
+ones
+intList = [];
+for i in srange(0,t):
+    for j in srange(0,ones):  
+        intVal = X.integrate(HH(X.fan(3)[i])*HH(X.fan(1)[j]) )
+        intList.append( intVal) 
+print( intList)
+
+
+for i in srange(0,t):
+    for k in srange(ones*i, ones*(i+1)):
+        if intList[k] < -1:
+            print ("less than -1", i, k)
+        if intList[k]==-1:
+            for j in srange(ones*i, ones*(i+1)):
+                if intList[j]==-1 and j!= k:
+                    print ("two occurences of -1", i, k, j)
+        else: print ("no problem in srange", (ones*i, ones*(i+1)) )
+
+
+#-------
+#F.4D.0060
+
+
+
+sage.misc.reset;
+
+p = Polyhedron(vertices = [[0,1,-1,1],[0,0,-1,1],[0,1,-1,-2],[0,0,-1,-2],[1,1,1,1],[1,-1,1,1],[1,1,0,1],[1,0,0,1],[1,1,0,-1],[1,0,0,-1],[1,-1,1,0],[1,1,1,0],[-1,1,1,0],[-1,-3,1,0],[-1,-3,1,1],[-1,1,1,1],[-1,-1,-1,-2],[-1,-1,-1,1],[-1,1,-1,-2],[-1,1,-1,1]]);
+p
+
+
+fan1 = NormalFan(p);
+fan1
+X = ToricVariety(fan1);
+dimension(X)
+HH = X.cohomology_ring(); HH
+t = len(X.fan(3));
+t
+ones = len(X.fan(1));
+ones
+intList = [];
+for i in srange(0,t):
+    for j in srange(0,ones):  
+        intVal = X.integrate(HH(X.fan(3)[i])*HH(X.fan(1)[j]) )
+        intList.append( intVal) 
+print( intList)
+
+
+for i in srange(0,t):
+    for k in srange(ones*i, ones*(i+1)):
+        if intList[k] < -1:
+            print ("less than -1", i, k)
+        if intList[k]==-1:
+            for j in srange(ones*i, ones*(i+1)):
+                if intList[j]==-1 and j!= k:
+                    print ("two occurences of -1", i, k, j)
+        else: print ("no problem in srange", (ones*i, ones*(i+1)) )
+
+
+#---F.4D.0061
+#---------
+
+
+sage.misc.reset;
+
+
+p = Polyhedron( vertices = [[0,1,1,1],[0,-2,1,1],[0,-2,1,0],[0,1,1,0],[1,1,1,0],[1,-1,1,0],[1,0,0,-1],[1,1,0,-1],[1,0,0,1],[1,1,0,1],[1,-1,1,1],[1,1,1,1],[0,0,-1,-2],[0,1,-1,-2],[0,0,-1,1],[0,1,-1,1],[-1,1,-1,1],[-1,1,-1,-2],[-1,-1,-1,1],[-1,-1,-1,-2],[-1,-2,0,-1],[-1,-2,0,1],[-1,1,0,-1],[-1,1,0,1]]); 
+p
+
+
+fan1 = NormalFan(p);
+fan1
+X = ToricVariety(fan1);
+dimension(X)
+HH = X.cohomology_ring(); HH
+t = len(X.fan(3));
+t
+ones = len(X.fan(1));
+ones
+intList = [];
+for i in srange(0,t):
+    for j in srange(0,ones):  
+        intVal = X.integrate(HH(X.fan(3)[i])*HH(X.fan(1)[j]) )
+        intList.append( intVal) 
+print( intList)
+
+
+for i in srange(0,t):
+    for k in srange(ones*i, ones*(i+1)):
+        if intList[k] < -1:
+            print ("less than -1", i, k)
+        if intList[k]==-1:
+            for j in srange(ones*i, ones*(i+1)):
+                if intList[j]==-1 and j!= k:
+                    print ("two occurences of -1", i, k, j)
+        else: print ("no problem in srange", (ones*i, ones*(i+1)) )
+
+#------------------------------
+
+#F.4D.0062: 
+p = Polyhedron(vertices = [[0,1,-1,1],[0,0,-1,1],[0,1,-1,-2],[0,0,-1,-2],[1,1,1,1],[1,-1,1,1],[1,1,0,1],[1,0,0,1],[1,1,0,-1],[1,0,0,-1],[1,-1,1,0],[1,1,1,0],[0,1,1,0],[0,-2,1,0],[0,-2,1,1],[0,1,1,1],[-2,-2,-1,-2],[-2,-2,-1,1],[-2,1,-1,-2],[-2,1,-1,1]]);
+p
+
+
+fan1 = NormalFan(p);
+fan1
+X = ToricVariety(fan1);
+dimension(X)
+HH = X.cohomology_ring(); HH
+t = len(X.fan(3));
+t
+ones = len(X.fan(1));
+ones
+intList = [];
+for i in srange(0,t):
+    for j in srange(0,ones):  
+        intVal = X.integrate(HH(X.fan(3)[i])*HH(X.fan(1)[j]) )
+        intList.append( intVal) 
+print( intList)
+
+for i in srange(0,t):
+    for k in srange(ones*i, ones*(i+1)):
+        if intList[k] < -1:
+            print ("less than -1", i, k)
+        if intList[k]==-1:
+            for j in srange(ones*i, ones*(i+1)):
+                if intList[j]==-1 and j!= k:
+                    print ("two occurences of -1", i, k, j)
+        else: print ("no problem in srange", (ones*i, ones*(i+1)) )
+
+
+#---------F.4D.0063
+
+p = Polyhedron(vertices = [[0,1,-1,-2],[0,0,-1,-1],[0,-2,1,1],[1,1,1,-2],[1,-1,1,0],[1,1,0,-2],[1,0,0,-1],[1,1,0,1],[1,0,0,1],[1,-1,1,1],[1,1,1,1],[0,0,-1,1],[0,1,-1,1],[-1,1,1,1],[-1,1,-1,1],[-1,-1,-1,1],[-1,-2,0,1],[-1,-1,-1,0],[-1,1,1,-2],[-1,-2,1,1],[-1,1,-1,-2]]); 
+p
+
+
+fan1 = NormalFan(p);
+fan1
+X = ToricVariety(fan1);
+dimension(X)
+HH = X.cohomology_ring(); HH
+t = len(X.fan(3));
+t
+ones = len(X.fan(1));
+ones
+intList = [];
+for i in srange(0,t):
+    for j in srange(0,ones):  
+        intVal = X.integrate(HH(X.fan(3)[i])*HH(X.fan(1)[j]) )
+        intList.append( intVal) 
+print( intList)
+
+
+
+for i in srange(0,t):
+    for k in srange(ones*i, ones*(i+1)):
+        if intList[k] < -1:
+            print ("less than -1", i, k)
+        if intList[k]==-1:
+            for j in srange(ones*i, ones*(i+1)):
+                if intList[j]==-1 and j!= k:
+                    print ("two occurences of -1", i, k, j)
+        else: print ("no problem in srange", (ones*i, ones*(i+1)) )
+
+
+#Multiple issues:
+#two occurences of -1 7 66 67: (i,k,j) = (7,66,67) => three cone is 7. 
+#two occurences of -1 7 67 66
+
+#To check: 3-cone #7 and divisor #66, 67 (mod 9)
+
+mod(66, 9)
+mod(67, 9)
+
+
+#Three cone #7, divisors #3 and 4:
+
+X.fan(3)[7].rays()
+X.fan(3)[7]
+
+X.fan(1)[3].rays()
+X.fan(1)[3]
+X.fan(1)[4].rays()
+X.fan(1)[4]
+
+#check intersection pairing:
+
+X.integrate(HH(X.fan(3)[7])*HH(X.fan(1)[3]) )
+X.integrate(HH(X.fan(3)[7])*HH(X.fan(1)[4]) )
+
+#------------
+#-----F.4D.0064
+
+p = Polyhedron(vertices = [[0,-1,1,-1],[0,-1,0,-1],[1,-1,1,1],[1,-1,-1,1],[1,-1,1,0],[1,-1,0,0],[1,1,1,0],[1,1,0,0],[1,1,-1,1],[1,1,1,1],[0,1,0,-1],[0,1,1,-1],[-1,1,1,1],[-1,1,-3,1],[-1,1,-1,-1],[-1,1,1,-1],[-1,-1,-3,1],[-1,-1,-1,-1],[-1,-1,1,1],[-1,-1,1,-1]]);
+p
+
+
+fan1 = NormalFan(p);
+fan1
+X = ToricVariety(fan1);
+dimension(X)
+HH = X.cohomology_ring(); HH
+t = len(X.fan(3));
+t
+ones = len(X.fan(1));
+ones
+intList = [];
+for i in srange(0,t):
+    for j in srange(0,ones):  
+        intVal = X.integrate(HH(X.fan(3)[i])*HH(X.fan(1)[j]) )
+        intList.append( intVal) 
+print( intList)
+
+
+
+for i in srange(0,t):
+    for k in srange(ones*i, ones*(i+1)):
+        if intList[k] < -1:
+            print ("less than -1", i, k)
+        if intList[k]==-1:
+            for j in srange(ones*i, ones*(i+1)):
+                if intList[j]==-1 and j!= k:
+                    print ("two occurences of -1", i, k, j)
+        else: print ("no problem in srange", (ones*i, ones*(i+1)) )
+
+
+#--------F.4D.0065
+
+
+p = Polyhedron(vertices = [[0,-1,1,1],[0,-1,-2,1],[0,1,-2,1],[0,1,1,1],[0,1,1,-1],[0,1,0,-1],[1,1,1,1],[1,1,-1,1],[1,1,0,0],[1,1,1,0],[1,-1,0,0],[1,-1,1,0],[1,-1,-1,1],[1,-1,1,1],[0,-1,0,-1],[0,-1,1,-1],[-1,-1,1,-1],[-1,-1,-1,-1],[-1,1,1,-1],[-1,1,-1,-1],[-1,1,-2,0],[-1,1,1,0],[-1,-1,-2,0],[-1,-1,1,0]]); p
+
+
+fan1 = NormalFan(p);
+fan1
+X = ToricVariety(fan1);
+dimension(X)
+HH = X.cohomology_ring(); HH
+t = len(X.fan(3));
+t
+ones = len(X.fan(1));
+ones
+intList = [];
+for i in srange(0,t):
+    for j in srange(0,ones):  
+        intVal = X.integrate(HH(X.fan(3)[i])*HH(X.fan(1)[j]) )
+        intList.append( intVal) 
+print( intList)
+
+
+
+for i in srange(0,t):
+    for k in srange(ones*i, ones*(i+1)):
+        if intList[k] < -1:
+            print ("less than -1", i, k)
+        if intList[k]==-1:
+            for j in srange(ones*i, ones*(i+1)):
+                if intList[j]==-1 and j!= k:
+                    print ("two occurences of -1", i, k, j)
+        else: print ("no problem in srange", (ones*i, ones*(i+1)) )
+
+#-------F.4D.0066
+#-----------
+
+
+p = Polyhedron(vertices = [[-1,1,1,0],[-1,1,-2,0],[-1,1,-1,-1],[-1,1,1,-1],[0,1,1,-1],[0,1,0,-1],[1,1,1,1],[1,1,-1,1],[1,1,0,0],[1,1,1,0],[0,1,1,1],[0,1,-2,1],[1,-2,0,0],[1,-2,1,0],[1,-1,-1,1],[1,-1,1,1],[0,-2,0,-1],[0,-2,1,-1],[0,0,1,1],[0,0,-2,1],[-1,-1,1,-1],[-1,-1,-1,-1],[-1,0,-2,0],[-1,0,1,0]]);
+p
+
+
+
+fan1 = NormalFan(p);
+fan1
+X = ToricVariety(fan1);
+dimension(X)
+HH = X.cohomology_ring(); HH
+t = len(X.fan(3));
+t
+ones = len(X.fan(1));
+ones
+intList = [];
+for i in srange(0,t):
+    for j in srange(0,ones):  
+        intVal = X.integrate(HH(X.fan(3)[i])*HH(X.fan(1)[j]) )
+        intList.append( intVal) 
+print( intList)
+
+
+
+for i in srange(0,t):
+    for k in srange(ones*i, ones*(i+1)):
+        if intList[k] < -1:
+            print ("less than -1", i, k)
+        if intList[k]==-1:
+            for j in srange(ones*i, ones*(i+1)):
+                if intList[j]==-1 and j!= k:
+                    print ("two occurences of -1", i, k, j)
+        else: print ("no problem in srange", (ones*i, ones*(i+1)) )
+
+#F.4D.0067
+#---------------------
+
+p = Polyhedron(vertices = [[0,-1,1,-1],[0,-1,0,-1],[1,-1,1,1],[1,-1,-1,1],[1,-1,1,0],[1,-1,0,0],[1,1,1,0],[1,1,0,0],[1,1,-1,1],[1,1,1,1],[0,1,0,-1],[0,1,1,-1],[0,1,1,1],[0,1,-2,1],[-2,1,-2,-1],[-2,1,1,-1],[0,-1,-2,1],[-2,-1,-2,-1],[0,-1,1,1],[-2,-1,1,-1]]); p
+
+
+fan1 = NormalFan(p);
+fan1
+X = ToricVariety(fan1);
+dimension(X)
+HH = X.cohomology_ring(); HH
+t = len(X.fan(3));
+t
+ones = len(X.fan(1));
+ones
+intList = [];
+for i in srange(0,t):
+    for j in srange(0,ones):  
+        intVal = X.integrate(HH(X.fan(3)[i])*HH(X.fan(1)[j]) )
+        intList.append( intVal) 
+print( intList)
+
+
+
+for i in srange(0,t):
+    for k in srange(ones*i, ones*(i+1)):
+        if intList[k] < -1:
+            print ("less than -1", i, k)
+        if intList[k]==-1:
+            for j in srange(ones*i, ones*(i+1)):
+                if intList[j]==-1 and j!= k:
+                    print ("two occurences of -1", i, k, j)
+        else: print ("no problem in srange", (ones*i, ones*(i+1)) )
+
+#F.4D.0068
+#--------
+
+p = Polyhedron( vertices = [[-2,1,1,-1],[-2,1,-2,-1],[0,1,-2,1],[0,1,1,1],[1,1,1,0],[1,1,0,0],[1,1,-1,1],[1,1,1,1],[0,1,0,-1],[0,1,1,-1],[1,-2,0,0],[1,-2,1,0],[1,-1,-1,1],[1,-1,1,1],[0,-2,0,-1],[0,-2,1,-1],[0,0,1,1],[0,0,-2,1],[-2,0,-2,-1],[-2,0,1,-1]]); p
+
+fan1 = NormalFan(p);
+fan1
+X = ToricVariety(fan1);
+dimension(X)
+HH = X.cohomology_ring(); HH
+t = len(X.fan(3));
+t
+ones = len(X.fan(1));
+ones
+intList = [];
+for i in srange(0,t):
+    for j in srange(0,ones):  
+        intVal = X.integrate(HH(X.fan(3)[i])*HH(X.fan(1)[j]) )
+        intList.append( intVal) 
+print( intList)
+
+
+
+for i in srange(0,t):
+    for k in srange(ones*i, ones*(i+1)):
+        if intList[k] < -1:
+            print ("less than -1", i, k)
+        if intList[k]==-1:
+            for j in srange(ones*i, ones*(i+1)):
+                if intList[j]==-1 and j!= k:
+                    print ("two occurences of -1", i, k, j)
+        else: print ("no problem in srange", (ones*i, ones*(i+1)) )
+
+
+#--------------
+#F.4D.0069
+
+p = Polyhedron(vertices = [[0,1,-1,1],[0,0,-1,1],[1,1,1,1],[1,-1,1,1],[1,0,0,1],[1,1,0,1],[1,0,0,-2],[1,1,0,-2],[1,-1,1,-2],[1,1,1,-2],[-2,1,1,1],[-2,-4,1,1],[-2,-2,-1,1],[-2,1,-1,1],[0,0,-1,-1],[0,1,-1,-1]]); p
+
+
+fan1 = NormalFan(p);
+fan1
+X = ToricVariety(fan1);
+dimension(X)
+HH = X.cohomology_ring(); HH
+t = len(X.fan(3));
+t
+ones = len(X.fan(1));
+ones
+intList = [];
+for i in srange(0,t):
+    for j in srange(0,ones):  
+        intVal = X.integrate(HH(X.fan(3)[i])*HH(X.fan(1)[j]) )
+        intList.append( intVal) 
+print( intList)
+
+
+
+for i in srange(0,t):
+    for k in srange(ones*i, ones*(i+1)):
+        if intList[k] < -1:
+            print ("less than -1", i, k)
+        if intList[k]==-1:
+            for j in srange(ones*i, ones*(i+1)):
+                if intList[j]==-1 and j!= k:
+                    print ("two occurences of -1", i, k, j)
+        else: print ("no problem in srange", (ones*i, ones*(i+1)) )
+
+
+#F.4D.0070
+
+p = Polyhedron(vertices = [[0,1,-1,1],[0,0,-1,1],[1,1,1,1],[1,-1,1,1],[1,0,0,1],[1,1,0,1],[1,0,0,-2],[1,1,0,-2],[1,-1,1,-1],[1,1,1,-1],[-1,1,1,1],[-1,-3,1,1],[-3,-3,-1,1],[-3,1,-1,1],[0,0,-1,-2],[0,1,-1,-2]]); p
+
+
+fan1 = NormalFan(p);
+fan1
+X = ToricVariety(fan1);
+dimension(X)
+HH = X.cohomology_ring(); HH
+t = len(X.fan(3));
+t
+ones = len(X.fan(1));
+ones
+intList = [];
+for i in srange(0,t):
+    for j in srange(0,ones):  
+        intVal = X.integrate(HH(X.fan(3)[i])*HH(X.fan(1)[j]) )
+        intList.append( intVal) 
+print( intList)
+
+
+
+for i in srange(0,t):
+    for k in srange(ones*i, ones*(i+1)):
+        if intList[k] < -1:
+            print ("less than -1", i, k)
+        if intList[k]==-1:
+            for j in srange(ones*i, ones*(i+1)):
+                if intList[j]==-1 and j!= k:
+                    print ("two occurences of -1", i, k, j)
+        else: print ("no problem in srange", (ones*i, ones*(i+1)) )
+
+
+#---------------------------------
+#F.4D.0071
+
+p = Polyhedron(vertices = [[1,-1,0,-1],[1,-1,-2,1],[1,-1,1,-1],[1,-1,1,1],[1,1,1,-1],[1,1,1,1],[1,1,-2,1],[1,1,0,-1],[-2,1,1,1],[0,1,1,-1],[-2,1,-2,1],[0,1,0,-1],[-2,-1,1,1],[0,-1,1,-1],[-2,-1,-2,1],[0,-1,0,-1]]);p
+
+fan1 = NormalFan(p);
+fan1
+X = ToricVariety(fan1);
+dimension(X)
+HH = X.cohomology_ring(); HH
+t = len(X.fan(3));
+t
+ones = len(X.fan(1));
+ones
+intList = [];
+for i in srange(0,t):
+    for j in srange(0,ones):  
+        intVal = X.integrate(HH(X.fan(3)[i])*HH(X.fan(1)[j]) )
+        intList.append( intVal) 
+print( intList)
+
+
+
+for i in srange(0,t):
+    for k in srange(ones*i, ones*(i+1)):
+        if intList[k] < -1:
+            print ("less than -1", i, k)
+        if intList[k]==-1:
+            for j in srange(ones*i, ones*(i+1)):
+                if intList[j]==-1 and j!= k:
+                    print ("two occurences of -1", i, k, j)
+        else: print ("no problem in srange", (ones*i, ones*(i+1)) )
+
+
+#F.4D.0086
+
+p = Polyhedron(vertices = [[1,0,1,-2],[-2,0,1,1],[-2,-2,1,1],[1,-2,1,-2],[1,1,-2,1],[1,-2,1,1],[1,1,1,1],[-1,1,1,1],[1,1,1,-1],[1,1,-2,0],[0,1,-2,1],[-1,1,-1,1],[1,1,-1,-1],[-2,-1,0,1],[-2,0,0,1],[1,-1,0,-2],[1,0,0,-2]]); p
+
+fan1 = NormalFan(p);
+fan1
+X = ToricVariety(fan1);
+dimension(X)
+HH = X.cohomology_ring(); HH
+t = len(X.fan(3));
+t
+ones = len(X.fan(1));
+ones
+intList = [];
+for i in srange(0,t):
+    for j in srange(0,ones):  
+        intVal = X.integrate(HH(X.fan(3)[i])*HH(X.fan(1)[j]) )
+        intList.append( intVal) 
+print( intList)
+
+
+for i in srange(0,t):
+    for k in srange(ones*i, ones*(i+1)):
+        if intList[k] < -1:
+            print ("less than -1", i, k)
+        if intList[k]==-1:
+            for j in srange(ones*i, ones*(i+1)):
+                if intList[j]==-1 and j!= k:
+                    print ("two occurences of -1", i, k, j)
+        else: print ("no problem in srange", (ones*i, ones*(i+1)) )
+
+
+#Offenders:
+#two occurences of -1 22 177 183
+#two occurences of -1 22 183 177
+
+#(i,k,j) = (22, 177, 183) 
+
+#Three cone = 22
+mod(177, 8)
+mod(183, 8)
+
+
+X.fan(3)[22].rays()
+X.fan(3)[22]
+
+X.fan(1)[1].rays()
+X.fan(1)[1]
+X.fan(1)[7].rays()
+X.fan(1)[7]
+
+#check intersection pairing:
+
+X.integrate(HH(X.fan(3)[22])*HH(X.fan(1)[1]) )
+X.integrate(HH(X.fan(3)[22])*HH(X.fan(1)[7]) )
+
+
+#--------
+#F.4D.0104
+
+p = Polyhedron(vertices = [[0,1,1,1],[0,1,-3,1],[0,-3,1,1],[1,1,1,-1],[1,-1,1,1],[1,1,-1,1],[1,1,1,1],[-1,1,1,-5],[-1,1,1,0],[-1,1,-4,0],[-1,-4,1,0]]);
+p
+
+
+fan1 = NormalFan(p);
+fan1
+X = ToricVariety(fan1);
+dimension(X)
+HH = X.cohomology_ring(); HH
+t = len(X.fan(3));
+t
+ones = len(X.fan(1));
+ones
+intList = [];
+for i in srange(0,t):
+    for j in srange(0,ones):  
+        intVal = X.integrate(HH(X.fan(3)[i])*HH(X.fan(1)[j]) )
+        intList.append( intVal) 
+print( intList)
+
+
+for i in srange(0,t):
+    for k in srange(ones*i, ones*(i+1)):
+        if intList[k] < -1:
+            print ("less than -1", i, k)
+        if intList[k]==-1:
+            for j in srange(ones*i, ones*(i+1)):
+                if intList[j]==-1 and j!= k:
+                    print ("two occurences of -1", i, k, j)
+        else: print ("no problem in srange", (ones*i, ones*(i+1)) )
+
+
+#less than -1: 16, 118: these are i and k
+
+X.fan(3)[16].rays()
+X.fan(1)[6].rays()
+
+
+mod(118, 7)
+
+X.integrate(HH(X.fan(3)[16])*HH(X.fan(1)[6]) )
+
+####This yields an intersection product of -2, which is not allowed for Bondal's numerical criterion. 
+
+
+#----------
+#F.4D.0115
+
+
+p = Polyhedron(vertices = [[1,1,1,-1],[1,1,1,1],[-5,1,1,1],[1,-5,1,1],[1,1,-5,1],[-1,1,1,-1],[1,-1,1,-1],[1,1,-1,-1]]);
+p
+
+
+fan1 = NormalFan(p);
+fan1
+X = ToricVariety(fan1);
+dimension(X)
+HH = X.cohomology_ring(); HH
+t = len(X.fan(3));
+t
+ones = len(X.fan(1));
+ones
+intList = [];
+for i in srange(0,t):
+    for j in srange(0,ones):  
+        intVal = X.integrate(HH(X.fan(3)[i])*HH(X.fan(1)[j]) )
+        intList.append( intVal) 
+print( intList)
+
+
+for i in srange(0,t):
+    for k in srange(ones*i, ones*(i+1)):
+        if intList[k] < -1:
+            print ("less than -1", i, k)
+        if intList[k]==-1:
+            for j in srange(ones*i, ones*(i+1)):
+                if intList[j]==-1 and j!= k:
+                    print ("two occurences of -1", i, k, j)
+        else: print ("no problem in srange", (ones*i, ones*(i+1)) )
+
+
+X.fan(3)[1].rays()
+X.fan(1)[3].rays()
+
+X.integrate(HH(X.fan(3)[1])*HH(X.fan(1)[3]) )
+
+
+#---------------------
+# F.4D.0002
+
+p = Polyhedron( vertices = [[1,-2,-1,0],[1,1,-1,-3],[1,-2,0,1],[1,-1,1,1],[1,1,0,1],[1,1,1,1],[1,1,-1,0],[0,1,1,1],[-2,1,0,1],[-3,1,-1,0],[1,1,1,0],[1,0,1,0],[1,1,0,-2],[0,-1,1,1],[-2,-2,0,1],[0,1,-1,-3],[-3,-2,-1,0]]);
+p
+
+
+fan1 = NormalFan(p);
+fan1
+X = ToricVariety(fan1);
+dimension(X)
+HH = X.cohomology_ring(); HH
+t = len(X.fan(3));
+t
+ones = len(X.fan(1));
+ones
+intList = [];
+for i in srange(0,t):
+    for j in srange(0,ones):  
+        intVal = X.integrate(HH(X.fan(3)[i])*HH(X.fan(1)[j]) )
+        intList.append( intVal) 
+print( intList)
+
+for i in srange(0,t):
+    for k in srange(ones*i, ones*(i+1)):
+        if intList[k] < -1:
+            print ("less than -1", i, k)
+        if intList[k]==-1:
+            for j in srange(ones*i, ones*(i+1)):
+                if intList[j]==-1 and j!= k:
+                    print ("two occurences of -1", i, k, j)
+        else: print ("no problem in srange", (ones*i, ones*(i+1)) )
+
+
+#less than -1 0 2 = "less than -1, i, k"
+
+X.fan(3)[0].rays()
+X.fan(1)[2].rays()
+
+
+X.integrate(HH(X.fan(3)[0])*HH(X.fan(1)[2]) )
+###Again we see an intersection product of -2.
+
+
+#when -1 appears twice:
+
+#two occurences of -1 5 40 45 = "two occurences of -1" (i,k,j)
+
+ones
+
+X.fan(3)[5].rays()
+
+mod(40,8)
+mod(45,8)
+
+X.fan(1)[0].rays()
+X.fan(1)[5].rays()
+
+
+X.integrate(HH(X.fan(3)[5])*HH(X.fan(1)[0]) )
+X.integrate(HH(X.fan(3)[5])*HH(X.fan(1)[5]) )
+
+
+#-----------------
+#F.4D.0003
+
+p = Polyhedron(vertices = [[1,-1,1,-1],[1,1,-3,1],[1,-3,1,1],[1,1,1,1],[1,1,1,-1],[-4,1,1,1],[0,1,1,-1],[1,1,0,-1],[1,1,-2,0],[1,0,0,-1],[-4,-3,1,1],[0,1,-3,1],[0,-1,1,-1]]);
+p
+
+
+fan1 = NormalFan(p);
+fan1
+X = ToricVariety(fan1);
+dimension(X)
+HH = X.cohomology_ring(); HH
+t = len(X.fan(3));
+t
+ones = len(X.fan(1));
+ones
+intList = [];
+for i in srange(0,t):
+    for j in srange(0,ones):  
+        intVal = X.integrate(HH(X.fan(3)[i])*HH(X.fan(1)[j]) )
+        intList.append( intVal) 
+print( intList)
+
+
+for i in srange(0,t):
+    for k in srange(ones*i, ones*(i+1)):
+        if intList[k] < -1:
+            print ("less than -1", i, k)
+        if intList[k]==-1:
+            for j in srange(ones*i, ones*(i+1)):
+                if intList[j]==-1 and j!= k:
+                    print ("two occurences of -1", i, k, j)
+        else: print ("no problem in srange", (ones*i, ones*(i+1)) )
+
+
+#two occurences of -1 5 35 39
+
+X.fan(3)[5].rays()
+
+mod(35,7)
+mod(39,7)
+
+X.fan(1)[0].rays()
+X.fan(1)[4].rays()
+
+X.integrate(HH(X.fan(3)[5])*HH(X.fan(1)[0]) )
+X.integrate(HH(X.fan(3)[5])*HH(X.fan(1)[4]) )
+
+
+#to check: less than -1 9 68
+
+X.fan(3)[9].rays()
+
+mod(68,7)
+
+X.fan(1)[5].rays()
+X.integrate(HH(X.fan(3)[9])*HH(X.fan(1)[5]) )
+
+
+
+#-----------------------
+#-----------------
+#---------F.4D.0083
+
+p = Polyhedron(vertices = [[1,-1,0,-1],[1,-1,0,1],[1,0,-1,1],[1,0,-1,-2],[1,1,-1,-2],[1,1,-1,1],[1,1,1,1],[1,1,1,0],[1,-1,1,0],[1,-1,1,1],[0,1,1,0],[0,1,1,1],[0,1,-1,1],[0,1,-1,-2],[-2,-1,1,0],[-2,-1,1,1],[-1,0,-1,-2],[-1,0,-1,1],[-2,-1,0,1],[-2,-1,0,-1]])
+p
+
+
+fan1 = NormalFan(p);
+fan1
+X = ToricVariety(fan1);
+dimension(X)
+HH = X.cohomology_ring(); HH
+t = len(X.fan(3));
+t
+ones = len(X.fan(1));
+ones
+intList = [];
+for i in srange(0,t):
+    for j in srange(0,ones):  
+        intVal = X.integrate(HH(X.fan(3)[i])*HH(X.fan(1)[j]) )
+        intList.append( intVal) 
+print( intList)
+
+
+for i in srange(0,t):
+    for k in srange(ones*i, ones*(i+1)):
+        if intList[k] < -1:
+            print ("less than -1", i, k)
+        if intList[k]==-1:
+            for j in srange(ones*i, ones*(i+1)):
+                if intList[j]==-1 and j!= k:
+                    print ("two occurences of -1", i, k, j)
+        else: print ("no problem in srange", (ones*i, ones*(i+1)) )
+
+
+#------------
+#----F.4D.0082
+
+p = Polyhedron(vertices = [[1,-1,0,-1],[1,-1,-2,1],[1,-1,1,-1],[1,-1,1,1],[1,1,1,-1],[1,1,1,1],[1,1,-2,1],[1,1,0,-1],[0,1,1,1],[0,1,1,-1],[0,1,-2,1],[0,1,0,-1],[-2,-1,1,1],[-2,-1,1,-1],[-2,-1,-2,1],[-2,-1,0,-1]]);
+p
+
+
+fan1 = NormalFan(p);
+fan1
+X = ToricVariety(fan1);
+dimension(X)
+HH = X.cohomology_ring(); HH
+t = len(X.fan(3));
+t
+ones = len(X.fan(1));
+ones
+intList = [];
+for i in srange(0,t):
+    for j in srange(0,ones):  
+        intVal = X.integrate(HH(X.fan(3)[i])*HH(X.fan(1)[j]) )
+        intList.append( intVal) 
+print( intList)
+
+
+for i in srange(0,t):
+    for k in srange(ones*i, ones*(i+1)):
+        if intList[k] < -1:
+            print ("less than -1", i, k)
+        if intList[k]==-1:
+            for j in srange(ones*i, ones*(i+1)):
+                if intList[j]==-1 and j!= k:
+                    print ("two occurences of -1", i, k, j)
+        else: print ("no problem in srange", (ones*i, ones*(i+1)) )
+
+
+#--------------------
+#F.4D.0081
+
+p = Polyhedron(vertices = [[1,1,1,-1],[1,-1,1,-1],[1,1,0,-1],[1,0,0,-1],[1,1,1,1],[1,-1,1,1],[1,0,0,1],[1,1,0,1],[-2,0,-3,1],[-2,1,-3,1],[-2,1,1,1],[-2,-4,1,1],[0,-2,1,-1],[0,1,1,-1],[0,0,-1,-1],[0,1,-1,-1]]);
+p
+
+
+fan1 = NormalFan(p);
+fan1
+X = ToricVariety(fan1);
+dimension(X)
+HH = X.cohomology_ring(); HH
+t = len(X.fan(3));
+t
+ones = len(X.fan(1));
+ones
+intList = [];
+for i in srange(0,t):
+    for j in srange(0,ones):  
+        intVal = X.integrate(HH(X.fan(3)[i])*HH(X.fan(1)[j]) )
+        intList.append( intVal) 
+print( intList)
+
+
+for i in srange(0,t):
+    for k in srange(ones*i, ones*(i+1)):
+        if intList[k] < -1:
+            print ("less than -1", i, k)
+        if intList[k]==-1:
+            for j in srange(ones*i, ones*(i+1)):
+                if intList[j]==-1 and j!= k:
+                    print ("two occurences of -1", i, k, j)
+        else: print ("no problem in srange", (ones*i, ones*(i+1)) )
+
+
+#-----------------------
+#---------F.4D.0080-----
+#-----------------------
+
+p = Polyhedron(vertices=[[0,1,-1,-1],[-2,1,-1,1],[-2,1,1,1],[1,1,1,-2],[1,1,0,-2],[1,1,0,1],[1,1,1,1],[0,1,-1,1],[1,-3,0,1],[1,-3,1,1],[0,-2,-1,1],[1,0,0,-2],[1,0,1,-2],[-2,0,1,1],[-2,0,-1,1],[0,0,-1,-1]]);
+p
+
+
+fan1 = NormalFan(p);
+fan1
+X = ToricVariety(fan1);
+dimension(X)
+HH = X.cohomology_ring(); HH
+t = len(X.fan(3));
+t
+ones = len(X.fan(1));
+ones
+intList = [];
+for i in srange(0,t):
+    for j in srange(0,ones):  
+        intVal = X.integrate(HH(X.fan(3)[i])*HH(X.fan(1)[j]) )
+        intList.append( intVal) 
+print( intList)
+
+
+for i in srange(0,t):
+    for k in srange(ones*i, ones*(i+1)):
+        if intList[k] < -1:
+            print ("less than -1", i, k)
+        if intList[k]==-1:
+            for j in srange(ones*i, ones*(i+1)):
+                if intList[j]==-1 and j!= k:
+                    print ("two occurences of -1", i, k, j)
+        else: print ("no problem in srange", (ones*i, ones*(i+1)) )
+
+
+#-----------------------
+#--------F.4D.0079------
+
+
+p = Polyhedron(vertices = [[0,0,-1,-1],[0,-2,-1,1],[1,0,1,-1],[1,0,0,-1],[1,-2,1,1],[1,-2,0,1],[1,1,1,-1],[1,1,0,-1],[1,1,1,1],[1,1,0,1],[0,1,-1,1],[0,1,-1,-1],[-1,1,1,1],[-1,1,1,-1],[-1,1,-1,1],[-1,1,-1,-1],[-1,-2,1,1],[-1,0,1,-1],[-1,-2,-1,1],[-1,0,-1,-1]]); p
+
+
+fan1 = NormalFan(p);
+fan1
+X = ToricVariety(fan1);
+dimension(X)
+HH = X.cohomology_ring(); HH
+t = len(X.fan(3));
+t
+ones = len(X.fan(1));
+ones
+intList = [];
+for i in srange(0,t):
+    for j in srange(0,ones):  
+        intVal = X.integrate(HH(X.fan(3)[i])*HH(X.fan(1)[j]) )
+        intList.append( intVal) 
+print( intList)
+
+
+for i in srange(0,t):
+    for k in srange(ones*i, ones*(i+1)):
+        if intList[k] < -1:
+            print ("less than -1", i, k)
+        if intList[k]==-1:
+            for j in srange(ones*i, ones*(i+1)):
+                if intList[j]==-1 and j!= k:
+                    print ("two occurences of -1", i, k, j)
+        else: print ("no problem in srange", (ones*i, ones*(i+1)) )
+
+
+#----------
+#F.4D.0079
+
+p = Polyhedron(vertices=[[0,0,-1,-1],[0,-2,-1,1],[1,0,1,-1],[1,0,0,-1],[1,-2,1,1],[1,-2,0,1],[1,1,1,-1],[1,1,0,-1],[1,1,1,1],[1,1,0,1],[0,1,-1,1],[0,1,-1,-1],[-1,1,1,1],[-1,1,1,-1],[-1,1,-1,1],[-1,1,-1,-1],[-1,-2,1,1],[-1,0,1,-1],[-1,-2,-1,1],[-1,0,-1,-1]]);
+p
+
+
+fan1 = NormalFan(p);
+fan1
+X = ToricVariety(fan1);
+dimension(X)
+HH = X.cohomology_ring(); HH
+t = len(X.fan(3));
+t
+ones = len(X.fan(1));
+ones
+intList = [];
+for i in srange(0,t):
+    for j in srange(0,ones):  
+        intVal = X.integrate(HH(X.fan(3)[i])*HH(X.fan(1)[j]) )
+        intList.append( intVal) 
+print( intList)
+
+
+for i in srange(0,t):
+    for k in srange(ones*i, ones*(i+1)):
+        if intList[k] < -1:
+            print ("less than -1", i, k)
+        if intList[k]==-1:
+            for j in srange(ones*i, ones*(i+1)):
+                if intList[j]==-1 and j!= k:
+                    print ("two occurences of -1", i, k, j)
+        else: print ("no problem in srange", (ones*i, ones*(i+1)) )
+
+
+#-------F.4D.0078-------
+#-----------------------
+
+
+p = Polyhedron(vertices = [[0,-1,1,1],[0,-1,-2,1],[0,1,1,1],[0,1,0,1],[0,1,1,-1],[0,1,0,-1],[1,1,1,1],[1,1,0,1],[1,1,0,0],[1,1,1,0],[1,-1,1,0],[1,-1,-2,0],[1,-1,-2,1],[1,-1,1,1],[0,-1,-2,-1],[0,-1,1,-1],[-1,-1,1,-1],[-1,-1,-2,-1],[-1,1,1,-1],[-1,1,0,-1],[-1,1,0,0],[-1,1,1,0],[-1,-1,-2,0],[-1,-1,1,0]]);
+p
+
+fan1 = NormalFan(p);
+fan1
+X = ToricVariety(fan1);
+dimension(X)
+HH = X.cohomology_ring(); HH
+t = len(X.fan(3));
+t
+ones = len(X.fan(1));
+ones
+intList = [];
+for i in srange(0,t):
+    for j in srange(0,ones):  
+        intVal = X.integrate(HH(X.fan(3)[i])*HH(X.fan(1)[j]) )
+        intList.append( intVal) 
+print( intList)
+
+
+for i in srange(0,t):
+    for k in srange(ones*i, ones*(i+1)):
+        if intList[k] < -1:
+            print ("less than -1", i, k)
+        if intList[k]==-1:
+            for j in srange(ones*i, ones*(i+1)):
+                if intList[j]==-1 and j!= k:
+                    print ("two occurences of -1", i, k, j)
+        else: print ("no problem in srange", (ones*i, ones*(i+1)) )
+
+
+#-----------
+#F.4D.0077
+
+p = Polyhedron(vertices = [[0,0,-1,0],[1,0,1,-2],[1,0,0,-1],[0,-1,-1,1],[1,-3,1,1],[1,-2,0,1],[0,1,-1,1],[1,1,1,1],[1,1,0,1],[1,1,0,-1],[1,1,1,-2],[0,1,-1,0],[0,1,1,1],[-2,1,-1,1],[0,1,1,-2],[-2,1,-1,0],[0,-3,1,1],[-2,-1,-1,1],[0,0,1,-2],[-2,0,-1,0]]);
+p
+
+
+
+fan1 = NormalFan(p);
+fan1
+X = ToricVariety(fan1);
+dimension(X)
+HH = X.cohomology_ring(); HH
+t = len(X.fan(3));
+t
+ones = len(X.fan(1));
+ones
+intList = [];
+for i in srange(0,t):
+    for j in srange(0,ones):  
+        intVal = X.integrate(HH(X.fan(3)[i])*HH(X.fan(1)[j]) )
+        intList.append( intVal) 
+print( intList)
+
+
+for i in srange(0,t):
+    for k in srange(ones*i, ones*(i+1)):
+        if intList[k] < -1:
+            print ("less than -1", i, k)
+        if intList[k]==-1:
+            for j in srange(ones*i, ones*(i+1)):
+                if intList[j]==-1 and j!= k:
+                    print ("two occurences of -1", i, k, j)
+        else: print ("no problem in srange", (ones*i, ones*(i+1)) )
+
+
+#---------------
+#---F.4D.0084---
+
+p = Polyhedron(vertices = [[1,-1,0,0],[1,1,0,-2],[1,-1,-1,1],[1,1,-3,1],[1,-1,1,1],[1,1,1,1],[1,1,1,-2],[1,-1,1,0],[0,1,1,1],[-2,-1,1,1],[0,1,1,-2],[-2,-1,1,0],[0,1,-3,1],[-2,-1,-1,1],[0,1,0,-2],[-2,-1,0,0]]);
+p
+
+
+fan1 = NormalFan(p);
+fan1
+X = ToricVariety(fan1);
+dimension(X)
+HH = X.cohomology_ring(); HH
+t = len(X.fan(3));
+t
+ones = len(X.fan(1));
+ones
+intList = [];
+for i in srange(0,t):
+    for j in srange(0,ones):  
+        intVal = X.integrate(HH(X.fan(3)[i])*HH(X.fan(1)[j]) )
+        intList.append( intVal) 
+print( intList)
+
+
+for i in srange(0,t):
+    for k in srange(ones*i, ones*(i+1)):
+        if intList[k] < -1:
+            print ("less than -1", i, k)
+        if intList[k]==-1:
+            for j in srange(ones*i, ones*(i+1)):
+                if intList[j]==-1 and j!= k:
+                    print ("two occurences of -1", i, k, j)
+        else: print ("no problem in srange", (ones*i, ones*(i+1)) )
+
+
+#F.4D.0004
+
+p = Polyhedron(vertices = [[1,-1,1,-1],[1,-1,1,1],[1,1,1,0],[1,1,1,1],[1,0,1,-1],[0,1,1,0],[-2,1,1,1],[1,1,0,0],[1,1,-2,1],[0,0,1,-1],[1,0,0,-1],[-6,-1,1,1],[-2,-1,1,-1],[1,-1,-6,1],[1,-1,-2,-1]]);
+p
+
+
+fan1 = NormalFan(p);
+fan1
+X = ToricVariety(fan1);
+dimension(X)
+HH = X.cohomology_ring(); HH
+t = len(X.fan(3));
+t
+ones = len(X.fan(1));
+ones
+intList = [];
+for i in srange(0,t):
+    for j in srange(0,ones):  
+        intVal = X.integrate(HH(X.fan(3)[i])*HH(X.fan(1)[j]) )
+        intList.append( intVal) 
+print( intList)
+
+
+for i in srange(0,t):
+    for k in srange(ones*i, ones*(i+1)):
+        if intList[k] < -1:
+            print ("less than -1", i, k)
+        if intList[k]==-1:
+            for j in srange(ones*i, ones*(i+1)):
+                if intList[j]==-1 and j!= k:
+                    print ("two occurences of -1", i, k, j)
+        else: print ("no problem in srange", (ones*i, ones*(i+1)) )
+
+
+#less than -1 2 19
+
+X.fan(3)[2].rays()
+
+ones
+mod(19,ones)
+
+X.fan(1)[3].rays()
+
+X.integrate(HH(X.fan(3)[2])*HH(X.fan(1)[3]))
+
+
+#---------------------
+#F.4D.0005
+
+p = Polyhedron(vertices=[[1,-1,1,0],[1,-1,1,-1],[1,0,1,-1],[1,1,1,1],[1,1,1,0],[1,0,1,1],[0,1,1,0],[-2,1,1,1],[1,1,0,0],[1,1,-2,1],[0,0,1,-1],[1,0,0,-1],[-4,0,1,1],[1,0,-4,1],[-2,-1,1,-1],[-4,-1,1,0],[1,-1,-2,-1],[1,-1,-4,0]]);
+p
+
+fan1 = NormalFan(p);
+fan1
+X = ToricVariety(fan1);
+dimension(X)
+HH = X.cohomology_ring(); HH
+t = len(X.fan(3));
+t
+ones = len(X.fan(1));
+ones
+intList = [];
+for i in srange(0,t):
+    for j in srange(0,ones):  
+        intVal = X.integrate(HH(X.fan(3)[i])*HH(X.fan(1)[j]) )
+        intList.append( intVal) 
+print( intList)
+
+
+for i in srange(0,t):
+    for k in srange(ones*i, ones*(i+1)):
+        if intList[k] < -1:
+            print ("less than -1", i, k)
+        if intList[k]==-1:
+            for j in srange(ones*i, ones*(i+1)):
+                if intList[j]==-1 and j!= k:
+                    print ("two occurences of -1", i, k, j)
+        else: print ("no problem in srange", (ones*i, ones*(i+1)) )
+
+#--less than -1 2 21
+
+X.fan(3)[2].rays()
+mod(21, ones)
+X.fan(1)[3].rays()
+
+X.integrate(HH(X.fan(3)[2])*HH(X.fan(1)[3]))
+
+#-------------------
+#-----F.4D.0006-----
+
+p = Polyhedron(vertices = [[1,-2,1,-1],[1,0,1,1],[1,1,1,0],[1,1,1,1],[1,0,1,-1],[0,1,1,0],[-2,1,1,1],[1,1,0,0],[1,1,-2,1],[0,0,1,-1],[1,0,0,-1],[-4,0,1,1],[-4,-2,1,-1],[1,0,-4,1],[1,-2,-4,-1]]);
+p
+
+fan1 = NormalFan(p);
+fan1
+X = ToricVariety(fan1);
+dimension(X)
+HH = X.cohomology_ring(); HH
+t = len(X.fan(3));
+t
+ones = len(X.fan(1));
+ones
+intList = [];
+for i in srange(0,t):
+    for j in srange(0,ones):  
+        intVal = X.integrate(HH(X.fan(3)[i])*HH(X.fan(1)[j]) )
+        intList.append( intVal) 
+print( intList)
+
+for i in srange(0,t):
+    for k in srange(ones*i, ones*(i+1)):
+        if intList[k] < -1:
+            print ("less than -1", i, k)
+        if intList[k]==-1:
+            for j in srange(ones*i, ones*(i+1)):
+                if intList[j]==-1 and j!= k:
+                    print ("two occurences of -1", i, k, j)
+        else: print ("no problem in srange", (ones*i, ones*(i+1)) )
+
+#less than -1 2 19
+X.fan(3)[2].rays()
+mod(19,ones)
+X.fan(1)[3].rays()
+X.integrate(HH(X.fan(3)[2])*HH(X.fan(1)[3]))
+
+
+
+#--- to check F.4D.0019
+
+p = Polyhedron(vertices = [[1,-2,1,-1],[1,0,1,1],[1,1,1,1],[1,1,1,-1],[-4,1,1,1],[1,1,-4,1],[0,1,1,-1],[1,1,0,-1],[-4,0,1,1],[0,-2,1,-1],[1,0,-4,1],[1,-2,0,-1]]);
+p
+
+fan1 = NormalFan(p);
+fan1
+X = ToricVariety(fan1);
+dimension(X)
+HH = X.cohomology_ring(); HH
+t = len(X.fan(3));
+t
+ones = len(X.fan(1));
+ones
+intList = [];
+for i in srange(0,t):
+    for j in srange(0,ones):  
+        intVal = X.integrate(HH(X.fan(3)[i])*HH(X.fan(1)[j]) )
+        intList.append( intVal) 
+print( intList)
+
+for i in srange(0,t):
+    for k in srange(ones*i, ones*(i+1)):
+        if intList[k] < -1:
+            print ("less than -1", i, k)
+        if intList[k]==-1:
+            for j in srange(ones*i, ones*(i+1)):
+                if intList[j]==-1 and j!= k:
+                    print ("two occurences of -1", i, k, j)
+        else: print ("no problem in srange", (ones*i, ones*(i+1)) )
+
+
+#---less than -1 4 32
+mod(32, ones)
+
+t
+ones
+X.fan(3)[4].rays()
+X.fan(1)[4].rays()
+
+X.integrate(HH(X.fan(3)[4])*HH(X.fan(1)[4]))
+
+
+
+#-----------------To check for F.4D.0018
+
+sage.misc.reset
+
+p = Polyhedron(vertices= [[1,-1,1,-1],[1,-1,1,1],[1,1,1,1],[1,1,1,-1],[-4,1,1,1],[1,1,-4,1],[0,1,1,-1],[1,1,0,-1],[-4,-1,1,1],[0,-1,1,-1],[1,-1,-4,1],[1,-1,0,-1]]);
+p
+
+
+
+fan1 = NormalFan(p);
+fan1
+X = ToricVariety(fan1);
+dimension(X)
+HH = X.cohomology_ring(); HH
+t = len(X.fan(3));
+t
+ones = len(X.fan(1));
+ones
+intList = [];
+for i in srange(0,t):
+    for j in srange(0,ones):  
+        intVal = X.integrate(HH(X.fan(3)[i])*HH(X.fan(1)[j]) )
+        intList.append( intVal) 
+print( intList)
+
+
+for i in srange(0,t):
+    for k in srange(ones*i, ones*(i+1)):
+        if intList[k] < -1:
+            print ("less than -1", i, k)
+        if intList[k]==-1:
+            for j in srange(ones*i, ones*(i+1)):
+                if intList[j]==-1 and j!= k:
+                    print ("two occurences of -1", i, k, j)
+        else: print ("no problem in srange", (ones*i, ones*(i+1)) )
+
+
+#----less than -1 4 32
+
+X.fan(3)[4].rays()
+
+mod(32, ones)
+X.fan(1)[4].rays()
+
+
+X.integrate(HH(X.fan(3)[4])*HH(X.fan(1)[4]))
+
+
+#F.4D.0002
+
+p = Polyhedron(vertices = [[0,1,-1],[0,0,-1],[1,1,1],[1,-1,1],[1,0,0],[1,1,0],[-1,1,1],[-1,-3,1],[-1,-1,-1],[-1,1,-1]]);
+p
+
+
+fan1 = NormalFan(p);
+fan1
+X = ToricVariety(fan1);
+dimension(X)
+HH = X.cohomology_ring(); HH
+t = len(X.fan(2));
+t
+ones = len(X.fan(1));
+ones
+intList = [];
+for i in srange(0,t):
+    for j in srange(0,ones):  
+        intVal = X.integrate(HH(X.fan(2)[i])*HH(X.fan(1)[j]) )
+        intList.append( intVal) 
+print( intList)
+
+
+
+for i in srange(0,t):
+    for k in srange(ones*i, ones*(i+1)):
+        if intList[k] < -1:
+            print ("less than -1", i, k)
+        if intList[k]==-1:
+            for j in srange(ones*i, ones*(i+1)):
+                if intList[j]==-1 and j!= k:
+                    print ("two occurences of -1", i, k, j)
+        else: print ("no problem in srange", (ones*i, ones*(i+1)) )
